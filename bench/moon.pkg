@@ -1,0 +1,9 @@
+pkgtype(kind: "executable")
+
+import {
+  "arena/moonmath/core",
+  "arena/moonmath/homotopy",
+  "arena/moonmath/algebra",
+  "arena/moonmath/derived",
+  "moonbitlang/core/bench" @cbench,
+}

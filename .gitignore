@@ -1,0 +1,20 @@
+# MoonBit build artifacts
+_build/
+.mooncakes/
+*.core
+*.mi
+*.wasm
+*.wat
+
+# Node (paper build tool lives in ~/work/web, not here)
+node_modules/
+
+# OS / editor
+.DS_Store
+.DS_Store?
+.vscode/
+.idea/
+*.swp
+
+# Bench raw logs (results are summarised in RESULTS.md)
+bench/last_run.txt
