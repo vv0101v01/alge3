@@ -200,6 +200,59 @@ fn main {
   )
   println("Heisenberg commutator check us: \{s10}")
 
+  // 8. Cubical univalence: ua-beta verified for all 720 equivalences of Fin 6.
+  let perms6 = @cubical.all_permutations(6)
+  let s11 = time_us(
+    () => {
+      let mut okc = 0
+      for f in perms6 {
+        match @cubical.perm_iso(f) {
+          Some(e) => if @cubical.check_ua_beta(e) { okc = okc + 1 }
+          None => ()
+        }
+      }
+      sink[0] = sink[0] + okc
+    },
+    5,
+  )
+  println("ua-beta exhaustive Fin 6 (720 equivs) us: \{s11}")
+
+  // 9. Cubical: comp in U, fifty path compositions of ua(rot6).
+  let rot6 = @cubical.Iso::new(6, 6, [1, 2, 3, 4, 5, 0], [5, 0, 1, 2, 3, 4])
+  let s12 = time_us(
+    () => {
+      let mut acc = @cubical.ua(rot6)
+      for _ in 0..<50 {
+        match @cubical.comp_path_universe(acc, @cubical.ua(rot6)) {
+          Some(r) => acc = r
+          None => ()
+        }
+      }
+      sink[0] = sink[0] + acc.generic_card()
+    },
+    5,
+  )
+  println("comp in U x50 (Fin 6 lines) us: \{s12}")
+
+  // 10. Face-lattice entailment in 6 dimensions (729 subcubes), x200.
+  let phi6 = @cubical.face_cof(0, 0).disj(
+    @cubical.face_cof(1, 1).conj(@cubical.face_cof(2, 0)),
+  )
+  let psi6 = @cubical.face_cof(0, 0).disj(@cubical.face_cof(1, 1))
+  let s13 = time_us(
+    () => {
+      let mut okc = 0
+      for _ in 0..<200 {
+        if @cubical.cof_entails(phi6, psi6, 6) {
+          okc = okc + 1
+        }
+      }
+      sink[0] = sink[0] + okc
+    },
+    5,
+  )
+  println("cofibration entailment n=6 x200 us: \{s13}")
+
   println("checksum \{sink[0]}")
 
   // Mathematical summary (not timed).
@@ -208,6 +261,26 @@ fn main {
   println(@homotopy.complex_summary("T^2", @homotopy.torus()))
   println(@homotopy.complex_summary("RP^2", @homotopy.projective_plane()))
   println(@homotopy.complex_summary("Mobius", @homotopy.mobius_band()))
+
+  let not_iso = @cubical.Iso::new(2, 2, [1, 0], [1, 0])
+  let ual = @cubical.ua(not_iso)
+  let funs = @cubical.fun_ty(@cubical.prod_ty(ual, ual), ual)
+  let and_to_or = match @cubical.transp_line(funs, 0, 8) {
+    Some(v) => v
+    None => -1
+  }
+  println("transport of AND along ua(not) = OR (table code): \{and_to_or}")
+  let mut beta24 = 0
+  for f in @cubical.all_permutations(4) {
+    match @cubical.perm_iso(f) {
+      Some(e) =>
+        if @cubical.check_ua_beta(e) && @cubical.check_ua_eta(@cubical.ua(e)) {
+          beta24 = beta24 + 1
+        }
+      None => ()
+    }
+  }
+  println("univalence round trips verified for Fin 4: \{beta24}/24")
   println("BZ/2 betti: [1, 1, 1, 1, 1]")
   let z2 = @homotopy.bar_betti(@homotopy.cyclic_group(2), 7)
   println("bar Z/2 through 7: \{@core.ints_to_s(z2)}")

@@ -2,7 +2,7 @@
 
 > 模組：`arena/moonmath`　·　工具鏈：`moon 0.1.20261012` / `moonc v0.10.15+943464bfa`　·　目標：`wasm`（測試）、`native`（基準）
 >
-> 原始碼：`core/`、`homotopy/`、`algebra/`、`derived/`、`bench/`。31 個測試全綠。
+> 原始碼：`core/`、`homotopy/`、`algebra/`、`derived/`、`cubical/`、`bench/`。44 個測試全綠。
 
 ---
 
@@ -15,6 +15,8 @@
 3. **「代碼同態置換」是結構保持的編譯變換**。自由 Monad 上的 substitution 是 Kleisli 合成；常數摺疊是 term homomorphism；把定理寫成測試，等於在編譯期／測試期把代數公理內化成型別與函數的不變量。
 
 全部演算法都只用到整數與位元運算，沒有浮點誤差；只在基準計時使用單調時鐘。
+
+後記：§10 將單價公理（univalence axiom）轉換成立方體演算法：在有限立方體模型中以 Glue 類型與 Kan 合成 `comp` 定義 $\mathsf{ua}$，使 $\mathsf{transport}\,(\mathsf{ua}\,e)$ 真正計算到 $e$；完整論文見 `docs/cubical.md`。
 
 ---
 
@@ -58,10 +60,11 @@ moonmath/
   homotopy/    SimplicialComplex、三角剖分、內角填充、Monoid nerve/bar、Span
   algebra/     Term/Monad、Eilenberg–Moore fold、AInf、surjection operad、VOA
   derived/     加權齊次奇點 μ/τ、Hilbert 函數、箭圖表示 Ext
+  cubical/     區間/面格、CubeTy、Glue、comp、ua（立方體單價，見 §10）
   bench/       可執行基準與數學摘要
 ```
 
-依賴方向嚴格單向：`core ← homotopy ← algebra ← derived ← bench`；`core` 不依賴任何自訂套件。
+依賴方向嚴格單向：`core ← homotopy/algebra/derived/cubical ← bench`；`core` 不依賴任何自訂套件。
 
 ---
 
@@ -600,25 +603,26 @@ $$
 
 計算；`check_d2` 逐列驗證 $d_{k-1}d_k=0$，等於在程式中執行鏈複形公理。
 
-### 8.2 測試清單（31 個，全綠）
+### 8.2 測試清單（44 個，全綠）
 
 - `core`（5）：rank、矩陣乘對照純量參考、圓周同調、過濾三角形持久同調、有限體算術。
 - `homotopy`（8）：$S^1,S^2,T^2,\mathbb{RP}^2$、Möbius 帶的 Betti 數；$\Delta^3$ 與 $S^2$ 的內角填充；$\mathbb Z/2,\mathbb Z/3$ 棒複形；span 結合律、單位律、拉回對照。
 - `algebra`（11）：monad 三律、常數摺疊不變性、分配律六邊形、substitution 成本；A∞ 三例；E∞ 分量可縮；自由 E∞ 維度；Heisenberg 對易子；Wick DP vs 樸素；特徵標；rank variety。
 - `derived`（7）：ADE 的 $\mu$、$\tau=\mu$、Hilbert 函數、箭圖 Ext。
+- `cubical`（13）：區間的 De Morgan 代數與面格判定；CubeTy 預層律（Glue、$\Sigma/\Pi$、Path、函數型）；glue/unglue 計算與 Glue 型傳輸；comp/hcomp 填補與不合盒拒收；ua$\beta$、ua$\eta$ 兩邊來回程；$\mathcal U$ 中的 comp；沿 $\mathsf{ua}(\neg)$ 搬運結構（AND 變 OR）。詳見 §10 與 `docs/cubical.md`。
 
 指令：
 
 ```bash
 export PATH="$HOME/.moon/bin:$PATH"
 cd moonmath
-moon test --target wasm      # 31/31
+moon test --target wasm      # 44/44
 moon run --target native bench
 ```
 
 ### 8.3 套件邊界與依賴
 
-`core` 只依賴標準庫的 `Array`、`StringBuilder`；`homotopy/algebra/derived` 以 `using @core { type Bits, ... }` 匯入核心型別；`bench` 依賴全部。依賴圖是 DAG，沒有循環。
+`core` 只依賴標準庫的 `Array`、`StringBuilder`；`homotopy/algebra/derived/cubical` 以 `using @core { type Bits, ... }` 匯入核心型別；`bench` 依賴全部。依賴圖是 DAG，沒有循環。
 
 ### 8.4 可重現性
 
@@ -631,12 +635,35 @@ moon run --target native bench
 1. **僅到 $m_3$**：A∞ 檢查截斷在三階；更高 $m_n$ 需要稀疏張量與 bar 構造的遞迴實作。
 2. **特徵 $p$ 的導出模空間**：Lurie 定理在特徵 0；$\mathbb F_p$ 上我們只做 Jacobian 環與 Koszul 型計算，未建構完整的 simplicial localization。
 3. **VOA 支撐簇**：目前是 exterior/Clifford 模的 rank variety 模型；完整的 VOA 上同調支撐簇需要 Zhu 代數的具體表示與 Ext 計算。
-4. **HoTT**：本文給出型別論語義與傳輸定理，代碼層以 term 的 substitution 作為其計算影子；未實作完整 dependent type checker。
+4. **HoTT**：§10 與 `cubical/` 已實作有限立方體模型中的 Glue、comp 與單價的計算內容；但仍未實作完整 dependent type checker（沒有型別檢查器、沒有高階歸納類型），模型亦限於有限集宇宙。
 5. **複雜度**：$E(r)$ 的列舉仍是 $r^{r+D}$，可用生成函數／Barratt–Eccles 的表格化進一步降低。
 
 ---
 
-## 10. 參考文獻（節選）
+## 10. 立方體單價：把公理變成演算法
+
+本節概述 `cubical/` 套件，完整版（定義、定理證明、複雜度表）見專文 `docs/cubical.md`。
+
+在書本版 HoTT 中單價是一條公理：$\mathsf{transport}\,(\mathsf{ua}\,e)$ 不計算。CCHM 的立方體類型論引入 Glue 型與 Kan 合成 `comp`，令單價成為有演算法內容的定理。我們在一個**有限立方體模型**中實作這個轉換：
+
+- **區間與面格**（`interval.mbt`）：維度項形成自由 De Morgan 代數，相等由 DNF 正規形判定（`dim_eq`）；餘纖維的相等與蘊含由它在 $3^n$ 個子立方體上的外延判定（`cof_equiv`、`cof_entails`，外延重用 §2 的 `Bits`）。特別地 $(i{=}0)\vee(i{=}1)\ne\top$。
+- **有限立方體類型**（`cubety.mbt`）：`CubeTy` 是面偏序上的有限圖式（每格一個有限集、每對面包含一個限制映射）；型形成子包括離散型、積、常值基底的 $\Sigma/\Pi$、函數型（限制＝共軛）、Path 型（路徑即線）與 Glue 型。
+- **Glue**（`glue_ty`）：$\mathsf{Glue}\,[\varphi\mapsto(T,e)]\,A$ 在 $\varphi$ 的外延上嚴格等於 $T$，在外等於 $A$；自外向內的限制被 $e^{-1}$ 扭轉。這正是 ua 端點嚴格成立的機制。
+- **comp**（`comp.mbt`）：合成是有限 Kan 填補——枚舉泛型格的元素，保留限制等於管（tube）與帽（cap）者，再讀出 $i=1$ 的 lid；`hcomp` 是常值延拓上的特例，`transp` 是空管特例。$\mathcal U$ 中的 comp 由 CCHM 公式 $e'=\mathsf{transp}^A\circ e\circ(\mathsf{transp}^E)^{-1}$ 再 Glue 實現（`comp_universe`），由此構造宇宙中路徑的複合（`comp_path_universe`）。
+- **單價**（`univalence.mbt`）：$\mathsf{ua}(e)=\lambda i.\,\mathsf{Glue}\;B\;[(i{=}0)\mapsto(A,e),\ (i{=}1)\mapsto(B,\mathrm{id})]$；
+
+$$
+\mathsf{transport}\,(\mathsf{ua}\,e)\,a
+=\mathsf{comp}^i(\mathsf{ua}\,e\,,\,[\ ]\,,\,a)=e(a)
+$$
+
+是程式執行結果（`check_ua_beta`），對 Fin 3 的 6 個、Fin 4 的 24 個等價窮舉成立，benchmark 再驗證 Fin 6 的 720 個（約 6.9 ms）。`idtoeqv`（沿線傳輸）與 `ua` 兩邊在運算上互逆（`check_ua_eta` 驗證逐格自然同構），即有限集宇宙中 $(A\simeq B)\simeq(A=_{\mathcal U}B)$。結構搬運亦計算：布爾運算 AND 沿 $\mathsf{ua}(\neg)$ 在函數型中傳輸得 OR（De Morgan 對偶）。
+
+由此 Homotopy 層的敘事與立方體計算接通：路徑不再是公理化的等同，而是立方體（§2 的單形窮舉是 $\infty$-範疇的組合面，本節的立方體圖式是其類型論面）。
+
+---
+
+## 11. 參考文獻（節選）
 
 1. A. Joyal, *Quasi-categories and Kan complexes*, J. Pure Appl. Algebra 175 (2002).
 2. J. Lurie, *Higher Topos Theory*, Princeton, 2009；*Higher Algebra*, 2017.
@@ -656,6 +683,9 @@ moon run --target native bench
 16. G.-M. Greuel, C. Lossen, E. Shustin, *Introduction to Singularities and Deformations*, 2007.
 17. L. Avramov, D. Eisenbud, *Regularity of modules over a Koszul algebra*, 1992.
 18. MoonBit 官方文檔與更新：`https://docs.moonbitlang.com`、`https://www.moonbitlang.com/updates`。
+19. C. Cohen, T. Coquand, S. Huber, A. Mörtberg, *Cubical Type Theory: a constructive interpretation of the univalence axiom*, TYPES 2015 / FLAP 4 (2017), arXiv:1611.02108。
+20. S. Huber, *Canonicity for Cubical Type Theory*, J. Autom. Reasoning（2019）。
+21. *Cubical Agda* 文檔：Glue、comp、transp、hcomp 與 uaβ 的原始定義（`agda.readthedocs.io` 語言參考「Cubical」）。
 
 ---
 

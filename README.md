@@ -11,6 +11,7 @@ Repository: <https://github.com/vv0101v01/alge3>
 - **homotopy**：單純複形與三角剖分（S¹、S²、T²、RP²、Möbius）、內角填充（擬範疇）、么半群神經／棒複形、span/correspondence 合成。
 - **algebra**：自由 Monad 與 substitution、Eilenberg–Moore fold、常數摺疊、A∞（Stasheff）、E∞（surjection operad 可縮性）、VOA（Heisenberg 模式、Wick DP、特徵標、rank variety）。
 - **derived**：加權齊次奇點的 Milnor／Tjurina 數與 Hilbert 函數（ADE）、箭圖表示的 Ext⁰/Ext¹。
+- **cubical**：把單價公理變成立方體演算法——區間的 De Morgan 代數、面格、Glue 類型、comp/hcomp/transp、$\mathsf{ua}$ 與 uaβ 計算（有限立方體模型，專文 `docs/cubical.md`）。
 - **bench**：可執行基準；**docs/paper.md**：定理、定義、算式與複雜度分析。
 
 ## 工具鏈
@@ -27,8 +28,8 @@ moon 0.1.20261012 / moonc v0.10.15+943464bfa (2026-10-12)
 git clone https://github.com/vv0101v01/alge3.git
 cd alge3
 export PATH="$HOME/.moon/bin:$PATH"
-moon test --target wasm        # 31/31
-moon test --target native      # 31/31
+moon test --target wasm        # 44/44
+moon test --target native      # 44/44
 moon run --target native bench # 數學摘要 + 基準
 ```
 
@@ -48,6 +49,9 @@ moon run --target native bench # 數學摘要 + 基準
 | BZ/2 至度 8 | 4.6 ms | — | — |
 | E(4) 至度 3 | 194–244 ms | — | — |
 | Milnor E₈ | 0.22–0.27 ms | — | — |
+| uaβ 窮舉 Fin 6（720 等價） | 6.9 ms | — | — |
+| $\mathcal U$ 中 comp ×50 | 2.8 ms | — | — |
+| 面格蘊含 n=6 ×200 | 60 ms | — | — |
 
 ## 數學結果（節選）
 
@@ -62,12 +66,15 @@ moon run --target native bench # 數學摘要 + 基準
 - Heisenberg 特徵標係數：`1,1,2,3,5,7,11,15,22`
 - ADE：A₁=1、A₂=2、A₄=4、D₄=4、E₆=6、E₇=7、E₈=8（μ=τ）
 - Kronecker (1,1)：Ext⁰=1、Ext¹=1
+- `transport (ua e) = e`（uaβ）：Fin 3、Fin 4 全部等價窮舉成立；`idtoeqv` 與 `ua` 兩邊來回程成立
+- 沿 `ua(not)` 搬運布爾運算：AND → OR、OR → AND、XOR → XNOR（De Morgan 由 comp 計出）
 
 ## 文件
 
 - 完整論文：`docs/paper.md`（HTML 版 `docs/paper.html`：單檔、公式內嵌成 SVG、無任何外部請求，離線可讀）。
 - 基準原始輸出與說明：`RESULTS.md`。
-- 方法論、定理、複雜度分析：論文 §1–§7；實作驗證 §8；限制 §9。
+- 方法論、定理、複雜度分析：論文 §1–§7；實作驗證 §8；限制 §9；立方體單價 §10。
+- 立方體單價專文：`docs/cubical.md` / `docs/cubical.html`（定義、Glue/comp/ua 公式、有限單價定理及證明、複雜度）。
 
 ## 專案結構
 
@@ -76,12 +83,13 @@ core/       GF(2) 位元向量、位並行線性代數、鏈複形、持久同�
 homotopy/   單形複形、內角填充、神經／棒複形、correspondence
 algebra/    自由 Monad、A∞、E∞（surjection operad）、VOA
 derived/    Milnor／Tjurina、Hilbert 函數、箭圖 Ext
+cubical/    區間/面格、CubeTy、Glue、comp、ua（立方體單價）
 bench/      可執行基準（moonbitlang/core/bench）
-docs/       paper.md / paper.html
+docs/       paper.md / paper.html、cubical.md / cubical.html
 scripts/    check.sh
 ```
 
-執行 `moon test` 時每個 package 的 `*_wbtest.mbt` 即為對應定理的可執行版本（31 個測試）。
+執行 `moon test` 時每個 package 的 `*_wbtest.mbt` 即為對應定理的可執行版本（44 個測試）。
 
 ## 2026 MoonBit 語法注意
 
