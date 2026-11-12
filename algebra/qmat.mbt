@@ -352,7 +352,16 @@ pub fn qmat_mul_ozaki2_crt(a : QMat, b : QMat) -> QMat {
   if BigInt::from_int(inner) * max_a * max_b >= bound_half_m {
     return qmat_mul(a, b)
   }
-  let zc = @swar.ozaki2_int_gemm_dp4a(m, inner, cols, za, zb)
+  let zc : Array[BigInt] = Array::make(m * cols, 0N)
+  for i in 0..<m {
+    for j in 0..<cols {
+      let mut acc = 0N
+      for k in 0..<inner {
+        acc = acc + za[i * inner + k] * zb[k * cols + j]
+      }
+      zc[i * cols + j] = acc
+    }
+  }
   let rows_out : Array[Array[Rat]] = []
   for i in 0..<m {
     let row : Array[Rat] = []
@@ -377,8 +386,6 @@ pub fn qmat_vec(a : QMat, v : QVec) -> QVec {
   }
   out
 }
-
-///|
 
 ///|
 pub fn qmat_eq(a : QMat, b : QMat) -> Bool {

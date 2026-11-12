@@ -422,6 +422,20 @@ pub fn comp_univ_value(
 }
 
 ///|
+pub fn glue_collapse(v : DValue) -> DValue {
+  match force_value(v) {
+    DVGlue(sys, base, _) => {
+      let clean = dsystem_of(sys.branches)
+      match top_branch(clean) {
+        Some(br) => (br.path)(DOne)
+        None => if clean.branches.length() == 0 { base } else { v }
+      }
+    }
+    other => other
+  }
+}
+
+///|
 /// Endpoint Glue structure of a line whose endpoint type may
 /// have reduced away its (generic, path-based) Glue form -- the
 /// analogue of `glue_equiv_endpoint_parts` for `DVGlue`.  This
@@ -752,9 +766,8 @@ pub fn comp_bool_value(
   line : (Dim) -> DValue,
   branches : DSystem,
   base : DValue,
-  dlevel : Int32,
+  _dlevel : Int32,
 ) -> DValue {
-  ignore(dlevel)
   if branches.branches.length() == 0 {
     return base
   }

@@ -313,42 +313,37 @@ pub fn verify_bide_morgan_cubical_duality() -> BiDeMorganCubicalReport {
   // 在 1 維區間偏序集 P = {v0(0), v1(1), edge(2)}，包含態射 v0 -> edge, v1 -> edge
   // 構造預層範疇子對象格（篩格）：
   //   空篩 ∅、{v0}、{v1}、邊界 ∂I = {v0, v1}、全區間 I = {v0, v1, edge}（共 5 個下閉篩！）
-  let c_interval = @sym.cat_poset(3, [(0, 2), (1, 2)])
-  let sieves = @topos.all_sieves_on(c_interval, 2)
-  let top_s = @topos.sieve_maximal(c_interval, 2)
+  let c_interval = cat_poset(3, [(0, 2), (1, 2)])
+  let sieves = all_sieves_on(c_interval, 2)
+  let top_s = sieve_maximal(c_interval, 2)
 
   // 1. 驗證全部篩滿足雙 Heyting 鏈：~~A ⊆ A ⊆ ¬¬A 及 ~~~A == ~A
   let mut chain_ok = sieves.length() == 5
   let mut leibniz_ok = true
   for a in sieves {
-    let nn_a = @topos.sieve_double_negation(c_interval, a)
-    let co_a = @topos.sieve_coheyting_neg(c_interval, a)
-    let coco_a = @topos.sieve_coheyting_neg(c_interval, co_a)
-    let cococo_a = @topos.sieve_coheyting_neg(c_interval, coco_a)
-    if !@topos.sieve_subset(coco_a, a) ||
-      !@topos.sieve_subset(a, nn_a) ||
-      cococo_a != co_a {
+    let nn_a = sieve_double_negation(c_interval, a)
+    let co_a = sieve_coheyting_neg(c_interval, a)
+    let coco_a = sieve_coheyting_neg(c_interval, co_a)
+    let cococo_a = sieve_coheyting_neg(c_interval, coco_a)
+    if !sieve_subset(coco_a, a) || !sieve_subset(a, nn_a) || cococo_a != co_a {
       chain_ok = false
     }
     // co-Heyting 差伴隨律：(a ⇐ b) ⊆ r ⇔ a ⊆ (b ∨ r)
     for b in sieves {
-      let diff_ab = @topos.sieve_coheyting_sub(c_interval, a, b)
+      let diff_ab = sieve_coheyting_sub(c_interval, a, b)
       for r in sieves {
-        let lhs = @topos.sieve_subset(diff_ab, r)
-        let rhs = @topos.sieve_subset(a, @topos.sieve_union(b, r))
+        let lhs = sieve_subset(diff_ab, r)
+        let rhs = sieve_subset(a, sieve_union(b, r))
         if lhs != rhs {
           chain_ok = false
         }
       }
       // 邊界算子 Leibniz 律：∂(A ∧ B) == (∂A ∧ B) ∨ (A ∧ ∂B)
-      let ab = @topos.sieve_inter(a, b)
-      let bd_ab = @topos.sieve_coheyting_boundary(c_interval, ab)
-      let bd_a = @topos.sieve_coheyting_boundary(c_interval, a)
-      let bd_b = @topos.sieve_coheyting_boundary(c_interval, b)
-      let rhs_leib = @topos.sieve_union(
-        @topos.sieve_inter(bd_a, b),
-        @topos.sieve_inter(a, bd_b),
-      )
+      let ab = sieve_inter(a, b)
+      let bd_ab = sieve_coheyting_boundary(c_interval, ab)
+      let bd_a = sieve_coheyting_boundary(c_interval, a)
+      let bd_b = sieve_coheyting_boundary(c_interval, b)
+      let rhs_leib = sieve_union(sieve_inter(bd_a, b), sieve_inter(a, bd_b))
       if bd_ab != rhs_leib {
         leibniz_ok = false
       }
@@ -357,17 +352,17 @@ pub fn verify_bide_morgan_cubical_duality() -> BiDeMorganCubicalReport {
 
   // 2. 具體幾何直覺檢驗：全區間 I 之 co-Heyting 補 ~I = ∅，而單側端點篩 S_0 = {v0} 之 co-Heyting 補
   //    ~S_0 = I ⇐ {v0} 必須包含整個主邊 edge（故包含 {v0, v1, edge}），其邊界 ∂S_0 = S_0 ∧ ~S_0 = {v0}！
-  let mut s0_opt : @topos.Sieve? = None
+  let mut s0_opt : Sieve? = None
   for s in sieves {
     if s.arrows.length() == 1 {
       s0_opt = Some(s)
       break
     }
   }
-  let bd_top = @topos.sieve_coheyting_boundary(c_interval, top_s)
+  let bd_top = sieve_coheyting_boundary(c_interval, top_s)
   let bd_geom_ok = match s0_opt {
     Some(s0) => {
-      let bd_s0 = @topos.sieve_coheyting_boundary(c_interval, s0)
+      let bd_s0 = sieve_coheyting_boundary(c_interval, s0)
       bd_top.arrows.length() == 0 && bd_s0 == s0
     }
     None => false
@@ -699,7 +694,7 @@ pub fn verify_internal_infinity_groupoid_axioms() -> InfinityGroupoidInternalCer
     @kernel.conv_at(0, 0, loop_ty, @kernel.dapp_dim(runit_cell, DOne), lp)
 
   // (iv) 負對照：有向區間範疇 0 -> 1 中態射 u : 0 -> 1 無逆態射 1 -> 0，非內蘊群胚
-  let dir_i = @sym.cat_arrow()
+  let dir_i = cat_arrow()
   let mut has_inv_1_to_0 = false
   for m in 0..<dir_i.nmor {
     if dir_i.dom[m] == 1 && dir_i.cod[m] == 0 {

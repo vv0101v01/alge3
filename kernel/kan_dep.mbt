@@ -433,33 +433,25 @@ pub fn dline_of_upath(p : UPath) -> DLine {
 // ---------------------------------------------------------------------------
 
 ///|
-fn dv_is_bool(v : DValue, expected : Bool) -> Bool {
-  match force_value(v) {
-    DVBool(b) => b == expected
-    _ => false
-  }
-}
-
-///|
 pub fn check_kan_coe_pi_sigma() -> Bool {
   // coe along Pi over the ua(not) domain line twists the identity to not.
   let pi_line = dline_pi_constfam(dline_bool_not_ua(), dline_bool())
   let id_fun = DVLam(x => x)
   let transported = dcoe(pi_line, 0.0, 1.0, id_fun)
-  if !dv_is_bool(dapp_typed(transported, DVBool(true), DVBoolTy), false) {
+  if !dv_is_bool_dep(dapp_typed(transported, DVBool(true), DVBoolTy), false) {
     return false
   }
-  if !dv_is_bool(dapp_typed(transported, DVBool(false), DVBoolTy), true) {
+  if !dv_is_bool_dep(dapp_typed(transported, DVBool(false), DVBoolTy), true) {
     return false
   }
   // and transporting back restores it.
   let back = dcoe(pi_line, 1.0, 0.0, transported)
-  if !dv_is_bool(dapp_typed(back, DVBool(true), DVBoolTy), true) {
+  if !dv_is_bool_dep(dapp_typed(back, DVBool(true), DVBoolTy), true) {
     return false
   }
   // comp with no tube is coe.
   let comped = dcomp(pi_line, None, id_fun)
-  if !dv_is_bool(dapp_typed(comped, DVBool(false), DVBoolTy), true) {
+  if !dv_is_bool_dep(dapp_typed(comped, DVBool(false), DVBoolTy), true) {
     return false
   }
   // Sigma over the same domain line twists the first component only.
@@ -510,8 +502,8 @@ pub fn check_kan_coe_dependent() -> Bool {
   // Dependent Pi: codomain line selected by the transported argument path.
   let dep_pi = dline_pi(dline_bool(), fam_if_true)
   let f = dcoe(dep_pi, 0.0, 1.0, DVLam(x => x))
-  dv_is_bool(dapp_typed(f, DVBool(true), DVBoolTy), false) &&
-  dv_is_bool(dapp_typed(f, DVBool(false), DVBoolTy), false)
+  dv_is_bool_dep(dapp_typed(f, DVBool(true), DVBoolTy), false) &&
+  dv_is_bool_dep(dapp_typed(f, DVBool(false), DVBoolTy), false)
 }
 
 ///|
@@ -534,7 +526,7 @@ pub fn check_kan_comp_tube() -> Bool {
   let pi_line = dline_pi_constfam(dline_bool(), dline_bool())
   let tube_f : ((Double) -> DValue)? = Some(_j => DVLam(x => dbool_not(x)))
   let cap_f = dcomp(pi_line, tube_f, DVLam(x => dbool_not(x)))
-  dv_is_bool(dapp_typed(cap_f, DVBool(true), DVBoolTy), false)
+  dv_is_bool_dep(dapp_typed(cap_f, DVBool(true), DVBoolTy), false)
 }
 
 ///|
@@ -607,19 +599,19 @@ pub fn check_dline_dimension_substitution() -> Bool {
   // its own inverse): coe in the reversed line from 0 to 1 is coe
   // in the original from 1 to 0.
   let rev = dline_rev(ua_line)
-  if !dv_is_bool(dcoe(rev, 0.0, 1.0, DVBool(true)), false) ||
-    !dv_is_bool(dcoe(rev, 1.0, 0.0, DVBool(true)), false) {
+  if !dv_is_bool_dep(dcoe(rev, 0.0, 1.0, DVBool(true)), false) ||
+    !dv_is_bool_dep(dcoe(rev, 1.0, 0.0, DVBool(true)), false) {
     return false
   }
   // Substitution by `i ∧ 0` collapses the line to its left fibre:
   // coercion is then the identity.  (The constant-zero expression
   // is `DAnd(DVar(0), DZero)`.)
   let collapsed = dline_subst(ua_line, DAnd(DVar(0), DZero))
-  if !dv_is_bool(dcoe(collapsed, 0.0, 1.0, DVBool(true)), true) {
+  if !dv_is_bool_dep(dcoe(collapsed, 0.0, 1.0, DVBool(true)), true) {
     return false
   }
   // Double reversal is the original line (pointwise at endpoints).
   let twice = dline_rev(rev)
-  dv_is_bool(dcoe(twice, 0.0, 1.0, DVBool(true)), false) &&
-  dv_is_bool(dcomp(twice, None, DVBool(false)), true)
+  dv_is_bool_dep(dcoe(twice, 0.0, 1.0, DVBool(true)), false) &&
+  dv_is_bool_dep(dcomp(twice, None, DVBool(false)), true)
 }

@@ -283,15 +283,12 @@ pub fn sigma_const_ty(fibers : Array[CubeTy]) -> CubeTy {
   }
   build_ty(n, card, fn(big, face) {
     let out : Array[Int32] = []
-    let mut off_big = 0
     let mut off_face = 0
     for f in fibers {
       for v in 0..<f.card[big] {
         out.push(off_face + f.restrict(big, face, v))
       }
-      off_big = off_big + f.card[big]
       off_face = off_face + f.card[face]
-      ignore(off_big)
     }
     out
   })

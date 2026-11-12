@@ -675,21 +675,149 @@ pub fn verify_glue_hae_and_universe_classifier_suite() -> GlueHaeUniverseClassif
   )
   let lift_all_ok = lift_beta && lift_eta && lift_coe_comm
 
-  // `(Bool ≃ Bool) ≃ (Bool =_U Bool)`：`ua_beta_path_value` 見證 `Path Bool (coe (ua not) b) (not b)`，
-  // 且 `ua(id)` 與 `ua(not)` 在 `U_0` 中不等價（區分全部 2 個自同構）！
+  // `(Bool ≃ Bool) ≃ (Bool =_U Bool)`：完整計算性單值性雙向等價驗證：
+  // 1) `ua_beta` 與反向 `ua_beta_inv`；
+  // 2) `ua_id : ua(idEquiv Bool) = refl Bool`；
+  // 3) `ua_eta : ua(pathToEquiv p) = p`（同時檢查 `refl Bool` 與 `ua(not)`）；
+  // 4) `pathToEquiv(ua e) = e` 與第一級單值等價 `(Bool ≃ Bool) ≃ (Bool =_U Bool)`；
+  // 5) 跨型別等價 `Bool ≃ Lift(Bool)` 之 `coe`/`ua_beta` 與組合路徑 `ua(not) ⬝ ua(not)`。
   let id_bool = @kernel.equiv_id_value(bool_ty)
   let p_id = @kernel.ua_value(id_bool, bool_ty, bool_ty, 0)
   let p_not = @kernel.ua_value(not_eqv, bool_ty, bool_ty, 0)
   let univ0 = @kernel.DValue::DVUniv(0)
   let path_u_ty = @kernel.DValue::DVPathTy(fn(_) { univ0 }, bool_ty, bool_ty)
-  let beta_path_t = @homotopy.ua_beta_path_value(
+  let refl_bool = @kernel.DValue::DVPathLam(fn(_) { bool_ty })
+  let equiv_bb_ty = @kernel.DValue::DVEquivTy(bool_ty, bool_ty, 0)
+  let beta_path_t = @kernel.ua_beta_path_value(
     not_eqv, bool_ty, bool_ty, 0, b_true, 0,
+  )
+  let beta_inv_t = @kernel.ua_beta_inv_path_value(
+    not_eqv, bool_ty, bool_ty, 0, b_true, 0,
+  )
+  let ua_id_p = @kernel.ua_id_path_value(bool_ty, 0, 0)
+  let ua_eta_not = @kernel.ua_eta_path_value(
+    fn(d) { @kernel.dapp_dim(p_not, d) },
+    bool_ty,
+    bool_ty,
+    0,
+    0,
+  )
+  let ua_eta_refl = @kernel.ua_eta_path_value(
+    fn(_) { bool_ty },
+    bool_ty,
+    bool_ty,
+    0,
+    0,
+  )
+  let retr_not = @kernel.path_to_equiv_ua_beta_path_value(
+    not_eqv, bool_ty, bool_ty, 0, 0,
+  )
+  let univ_eqv = @kernel.univalence_equiv_value(bool_ty, bool_ty, 0, 0)
+  let ua_equiv_chk = @kernel.conv_at(
+      0,
+      0,
+      path_u_ty,
+      @kernel.dapp_typed(
+        @kernel.equiv_fwd_value(univ_eqv, equiv_bb_ty, path_u_ty),
+        not_eqv,
+        equiv_bb_ty,
+      ),
+      p_not,
+    ) &&
+    @kernel.conv_at(
+      0,
+      0,
+      equiv_bb_ty,
+      @kernel.equiv_inv_fun_value(univ_eqv, equiv_bb_ty, path_u_ty, p_not),
+      not_eqv,
+    )
+  let ua_not_twice = @homotopy.dpath_trans_value(univ0, p_not, p_not, 0)
+  let lift_bool = cubical_lift_type_value(bool_ty)
+  let lift_eqv = @kernel.equiv_make_value(
+    bool_ty,
+    lift_bool,
+    @kernel.DValue::DVLam(fn(x) { cubical_lift_in_value(x) }),
+    @kernel.DValue::DVLam(fn(u) { cubical_lift_out_value(u) }),
+    @kernel.DValue::DVLam(fn(u) { @homotopy.dpath_refl_value(u) }),
+    @kernel.DValue::DVLam(fn(x) { @homotopy.dpath_refl_value(x) }),
+  )
+  let lift_ua = @kernel.ua_line_value(lift_eqv, bool_ty, lift_bool, 0)
+  let coe_bool_to_lift = @kernel.coe_value(lift_ua, DZero, DOne, b_true, 0)
+  let coe_lift_to_bool = @kernel.coe_value(
+    lift_ua,
+    DOne,
+    DZero,
+    coe_bool_to_lift,
+    0,
   )
   let ua_iso_ok = !@kernel.conv_at(0, 0, path_u_ty, p_id, p_not) &&
     @kernel.dv_is_bool_dep(@kernel.dapp_dim(beta_path_t, DZero), false) &&
     @kernel.dv_is_bool_dep(@kernel.dapp_dim(beta_path_t, DOne), false) &&
+    @kernel.dv_is_bool_dep(@kernel.dapp_dim(beta_inv_t, DZero), false) &&
+    @kernel.dv_is_bool_dep(@kernel.dapp_dim(beta_inv_t, DOne), false) &&
     @kernel.conv_ty(0, 0, @kernel.dapp_dim(p_not, DZero), bool_ty) &&
-    @kernel.conv_ty(0, 0, @kernel.dapp_dim(p_not, DOne), bool_ty)
+    @kernel.conv_ty(0, 0, @kernel.dapp_dim(p_not, DOne), bool_ty) &&
+    @kernel.conv_at(0, 0, path_u_ty, @kernel.dapp_dim(ua_id_p, DZero), p_id) &&
+    @kernel.conv_at(0, 0, path_u_ty, @kernel.dapp_dim(ua_id_p, DOne), refl_bool) &&
+    @kernel.conv_at(
+      0,
+      0,
+      path_u_ty,
+      @kernel.dapp_dim(ua_eta_not, DZero),
+      @kernel.ua_value(
+        @kernel.path_to_equiv_value(
+          fn(d) { @kernel.dapp_dim(p_not, d) },
+          bool_ty,
+          bool_ty,
+          0,
+          0,
+        ),
+        bool_ty,
+        bool_ty,
+        0,
+      ),
+    ) &&
+    @kernel.conv_at(0, 0, path_u_ty, @kernel.dapp_dim(ua_eta_not, DOne), p_not) &&
+    @kernel.conv_at(
+      0,
+      0,
+      path_u_ty,
+      @kernel.dapp_dim(ua_eta_refl, DOne),
+      refl_bool,
+    ) &&
+    @kernel.conv_at(
+      0,
+      0,
+      equiv_bb_ty,
+      @kernel.dapp_dim(retr_not, DZero),
+      @kernel.path_to_equiv_value(
+        fn(d) { @kernel.dapp_dim(p_not, d) },
+        bool_ty,
+        bool_ty,
+        0,
+        0,
+      ),
+    ) &&
+    @kernel.conv_at(
+      0,
+      0,
+      equiv_bb_ty,
+      @kernel.dapp_dim(retr_not, DOne),
+      not_eqv,
+    ) &&
+    ua_equiv_chk &&
+    @kernel.dv_is_bool_dep(
+      @kernel.coe_value(
+        fn(d) { @kernel.dapp_dim(ua_not_twice, d) },
+        DZero,
+        DOne,
+        b_true,
+        0,
+      ),
+      true,
+    ) &&
+    @kernel.dv_is_bool_dep(cubical_lift_out_value(coe_bool_to_lift), true) &&
+    @kernel.dv_is_bool_dep(coe_lift_to_bool, true)
 
   GlueHaeUniverseClassifierReport::{
     glue_type_strict_top_and_bot_collapse_ok: strict_collapse_ok,

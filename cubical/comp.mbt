@@ -202,14 +202,12 @@ pub fn stage_line_iso(x : CubeTy, mid_stage : Int32, dir : Int32) -> Iso? {
 /// `unglue (glue [phi ↦ t] a) = a` and, when `phi` holds, `unglue g = e g`).
 pub fn unglue_at(
   phi : Cof,
-  t : CubeTy,
+  _t : CubeTy,
   a : CubeTy,
   e : Array[Array[Int32]],
   sigma : Int32,
   x : Int32,
 ) -> Int32 {
-  ignore(t)
-  ignore(a)
   if phi.holds_code(sigma, a.n) {
     e[sigma][x]
   } else {

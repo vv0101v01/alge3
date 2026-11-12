@@ -308,7 +308,7 @@ pub fn regular_ext_module(n : Int32) -> ExtModule {
 /// Returns `(max_rank, number_of_t_with_rank_lt_max)`; the latter is the
 /// number of field points of the rank variety.
 pub fn rank_variety_stats(m : ExtModule, p : Int32) -> (Int32, Int32) {
-  let total = pow_int_local(p, m.n)
+  let total = pow_int(p, m.n)
   let mut maxrank = 0
   let ranks : Array[Int32] = []
   for code in 0..<total {
@@ -345,13 +345,4 @@ pub fn rank_variety_stats(m : ExtModule, p : Int32) -> (Int32, Int32) {
     }
   }
   (maxrank, count)
-}
-
-///|
-fn pow_int_local(base : Int32, exp : Int32) -> Int32 {
-  let mut r = 1
-  for _ in 0..<exp {
-    r = r * base
-  }
-  r
 }

@@ -37,7 +37,11 @@ pub extend Rat with Eq::{not_equal, equal}
 
 ///|
 pub fn bigint_abs(x : BigInt) -> BigInt {
-  @gcd.ugcd_bigint_abs(x)
+  if x < 0N {
+    -x
+  } else {
+    x
+  }
 }
 
 ///|
@@ -45,17 +49,27 @@ pub fn bigint_abs(x : BigInt) -> BigInt {
 /// result is positive; `gcd(0,0)` is defined as 1 so rational
 /// normalization is total.
 pub fn bigint_gcd(a0 : BigInt, b0 : BigInt) -> BigInt {
-  let g = @gcd.ugcd_bigint_gcd(a0, b0)
-  if g == 0N {
+  let mut a = bigint_abs(a0)
+  let mut b = bigint_abs(b0)
+  while b != 0N {
+    let r = a % b
+    a = b
+    b = r
+  }
+  if a == 0N {
     1N
   } else {
-    g
+    a
   }
 }
 
 ///|
 pub fn bigint_lcm(a : BigInt, b : BigInt) -> BigInt {
-  @gcd.ugcd_bigint_lcm(a, b)
+  if a == 0N || b == 0N {
+    0N
+  } else {
+    bigint_abs(a) / bigint_gcd(a, b) * bigint_abs(b)
+  }
 }
 
 ///|
@@ -86,8 +100,6 @@ pub fn rat_big_int(n : BigInt) -> Rat {
 }
 
 ///|
-
-///|
 pub fn rat_int(n : Int32) -> Rat {
   Rat::{ num: BigInt::from_int(n), den: 1N, }
 }
@@ -101,8 +113,6 @@ pub fn rat_zero() -> Rat {
 pub fn rat_one() -> Rat {
   rat_int(1)
 }
-
-///|
 
 ///|
 fn bigint_scaled_mantissa(x : BigInt) -> (Double, Int32) {
@@ -413,8 +423,6 @@ pub fn poly_mul(a : Poly, b : Poly) -> Poly {
 }
 
 ///|
-
-///|
 pub fn poly_eq(a : Poly, b : Poly) -> Bool {
   poly_is_zero(poly_sub(a, b))
 }
@@ -553,8 +561,6 @@ pub fn sc_var(id : Int32) -> SymC {
 }
 
 ///|
-
-///|
 pub fn sc_add(a : SymC, b : SymC) -> SymC {
   sc_make(frac_add(a.re, b.re), frac_add(a.im, b.im))
 }
@@ -628,8 +634,6 @@ pub fn sym_vec_scale(f : SymFrac, a : SymVec) -> SymVec {
 }
 
 ///|
-
-///|
 pub fn sym_vec_eq(a : SymVec, b : SymVec) -> Bool {
   if a.length() != b.length() {
     return false
@@ -687,8 +691,6 @@ pub fn sym_mat_identity(n : Int32) -> SymMat {
 pub fn sym_mat_from_rows(rows : Array[Array[SymC]]) -> SymMat {
   SymMat::{ n: rows.length(), rows, }
 }
-
-///|
 
 ///|
 pub fn sym_mat_add(a : SymMat, b : SymMat) -> SymMat {
@@ -772,8 +774,6 @@ pub fn sym_mat_eq(a : SymMat, b : SymMat) -> Bool {
   }
   true
 }
-
-///|
 
 ///|
 pub fn sym_is_hermitian(m : SymMat) -> Bool {

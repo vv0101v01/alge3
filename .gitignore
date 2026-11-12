@@ -5,6 +5,7 @@ _build/
 *.mi
 *.wasm
 *.wat
+pkg.generated.mbti
 
 # Node (paper build tool lives in ~/work/web, not here)
 node_modules/

@@ -4,35 +4,23 @@ using @face_bdd {
   type Dim,
   type Face,
   bdd_and,
-  bdd_dag_not,
-  bdd_dag_or,
-  bdd_dag_true,
-  bdd_dag_var,
-  bdd_manager_new,
   bdd_not,
   bdd_of_face,
   bdd_or,
-  bdd_tree_cofactor,
-  contains_int,
+  bdd_satisfying_cubes,
   dim_eq_demorgan,
   dim_eq_sem,
   dim_nvars_sem,
   dim_simplify,
   dim_subst,
-  dim_vars_into,
   eval_dim,
   face_eq_mod,
-  face_holds,
   face_is_bot_sem,
   face_is_sat_sem,
   face_is_top_sem,
   face_nvars_sem,
   face_simplify,
   face_subst,
-  face_vars,
-  face_vars_into,
-  pow2,
-  sort_ints,
 }
 
 ///|
@@ -215,6 +203,7 @@ pub(all) enum DTerm {
   DGlueEquiv(DTerm, Array[DEquivBranch]) // base type, equiv branches
   DUnglueEquiv(DTerm, DTerm, Array[DEquivBranch]) // glue term, base type, equiv branches
   DUa(DTerm) // an equivalence as a path in the universe
+  DPathToEquiv(DTerm) // path in the universe to an equivalence
 }
 
 ///|
@@ -1186,6 +1175,10 @@ fn dterm_write_key(buf : StringBuilder, t : DTerm) -> Unit {
       buf.write_string("Ua")
       dterm_write_key(buf, e)
     }
+    DPathToEquiv(p) => {
+      buf.write_string("Pe")
+      dterm_write_key(buf, p)
+    }
   }
 }
 
@@ -1316,8 +1309,6 @@ pub fn dsnd_typed(
     _ => DVUnit
   }
 }
-
-///|
 
 ///|
 /// Endpoint reduction for paths obtained from a neutral
@@ -1666,6 +1657,10 @@ fn dterm_conv_plausible(a : DTerm, b : DTerm) -> Bool {
     | (_, DPartial(_))
     | (DGlueEquiv(_, _), _)
     | (_, DGlueEquiv(_, _))
+    | (DUa(_), _)
+    | (_, DUa(_))
+    | (DPathToEquiv(_), _)
+    | (_, DPathToEquiv(_))
     | (DHComp(DUniv(_), _, _), _)
     | (_, DHComp(DUniv(_), _, _)) => true
     (DTVar(x), DTVar(y)) => x == y
@@ -2283,6 +2278,7 @@ pub fn deval_dim(t : DTerm, env : DEnv, denv : DDimEnv) -> DValue {
     DUnglueEquiv(term, base, branches) =>
       eval_unglue_equiv_term(term, base, branches, env, denv)
     DUa(e) => eval_ua_term(e, env, denv)
+    DPathToEquiv(p) => eval_path_to_equiv_term(p, env, denv)
     DTorusElim(motive, square, scrut) =>
       eval_torus_elim(
         x => deval_dim(motive, denv_cons(x, env), denv),
@@ -2292,8 +2288,6 @@ pub fn deval_dim(t : DTerm, env : DEnv, denv : DDimEnv) -> DValue {
       )
   }
 }
-
-///|
 
 ///|
 fn elim_over_comp(
@@ -3205,6 +3199,7 @@ pub fn d_infer(t : DTerm, ctx : DEnv, env : DEnv, denv : DDimEnv) -> DInfer? {
     DUnglueEquiv(term, base, branches) =>
       infer_unglue_equiv(term, base, branches, ctx, env, denv)
     DUa(e) => infer_ua(e, ctx, env, denv)
+    DPathToEquiv(p) => infer_path_to_equiv(p, ctx, env, denv)
     DPair(_, _) | DNil | DPartial(_) => None // introduction forms are check-only
   }
 }
@@ -3978,8 +3973,22 @@ pub fn conv_ty(level : Int32, dlevel : Int32, a : DValue, b : DValue) -> Bool {
         y => conv_ty(level, dlevel, a, y)
       }
     (DVGlue(s1, b1, _), DVGlue(s2, b2, _)) =>
-      conv_ty(level, dlevel, b1, b2) &&
-      glue_type_systems_conv(level, dlevel, s1, s2)
+      match (glue_collapse(a), glue_collapse(b)) {
+        (DVGlue(_, _, _), DVGlue(_, _, _)) =>
+          conv_ty(level, dlevel, b1, b2) &&
+          glue_type_systems_conv(level, dlevel, s1, s2)
+        (x, y) => conv_ty(level, dlevel, x, y)
+      }
+    (DVGlue(_, _, _), _) =>
+      match glue_collapse(a) {
+        DVGlue(_, _, _) => false
+        x => conv_ty(level, dlevel, x, b)
+      }
+    (_, DVGlue(_, _, _)) =>
+      match glue_collapse(b) {
+        DVGlue(_, _, _) => false
+        y => conv_ty(level, dlevel, a, y)
+      }
     (DVNeutral(x), DVNeutral(y)) => conv_neutral(level, dlevel, x, y)
     _ => false
   }
@@ -4581,5 +4590,8 @@ pub fn check_dep_sigma() -> Bool {
 
 ///|
 pub fn check_dep_all() -> Bool {
-  check_dep_universe() && check_dep_pi() && check_dep_sigma()
+  check_dep_universe() &&
+  check_dep_pi() &&
+  check_dep_sigma() &&
+  check_computational_univalence()
 }

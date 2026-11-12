@@ -1,3 +1,4 @@
 import {
   "arena/moonmath/core",
+  "moonbitlang/core/debug",
 }

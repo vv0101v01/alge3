@@ -113,10 +113,6 @@ pub fn pval_snd(v : PVal) -> PVal {
 }
 
 ///|
-
-///|
-
-///|
 pub struct Iso {
   src : Ty
   dst : Ty
