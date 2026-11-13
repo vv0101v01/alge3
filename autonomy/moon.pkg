@@ -1,0 +1,6 @@
+import {
+  "arena/moonmath/face_bdd",
+  "arena/moonmath/homotopy",
+  "arena/moonmath/kernel",
+  "moonbitlang/core/debug",
+}

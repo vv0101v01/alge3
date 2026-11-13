@@ -98,3 +98,35 @@ scripts/    check.sh
 - `moon.pkg` DSL；`using @pkg { type T, value }`；`using` 塊不接受 `fn`。
 - 範圍 `for i in (a + 1)..<n` 要括號。
 - 熱路徑已標 `#inline`；測試以 `moon test --target wasm` 執行。
+
+---
+
+## 更新紀錄（2026-11-13 流水式追加，保留全部舊文）
+
+### 階段一：根目錄 14 份模組歸位與依賴清理
+
+原根目錄 14 份獨立 `.mbt` 檔案已完成符號衝突排查、移除／本地替代外部依賴（`@gcd`、`@swar`、`@sym`、`@topos` 等），並歸位至 12 個無環套件階層中：
+
+- **符號衝突與套件拆分**：14 份檔案彼此與檔名零碰撞；對直接併入舊套件時會發生的 6 處符號碰撞（`int_pow`、`glue_at`、`partial_empty`、`Iso`/`ua`、`Term`、`PolyTerm`），透過設立獨立套件 `cube/`、`face_bdd/`、`finite/`、`kernel/`、`autonomy/`、`structures/`，以及將無碰撞模組併入 `algebra/`（`symalg.mbt`、`qpoly.mbt`、`qmat.mbt`）與 `homotopy/`（`cubical_algorithms.mbt`、`circle_hit.mbt`）徹底消弭。
+- **新增／擴充套件目錄**：
+  - `algebra/`：新增 `symalg.mbt`、`qpoly.mbt`、`qmat.mbt`（純 `BigInt` 有理多項式與精確矩陣演算法）
+  - `cube/`：`cube.mbt`、`complex.mbt`
+  - `face_bdd/`：`face_bdd.mbt`（維度、面公式、自由 De Morgan DNF、ROBDD）
+  - `finite/`：`nbe.mbt`、`nbe_eta.mbt`、`pathp_glue.mbt`、`wiring.mbt`
+  - `kernel/`：`nbe_dep.mbt`、`kan_ast.mbt`、`kan_dep.mbt`、`specs_levels.mbt`、`inductive_hit.mbt`、`equiv_glue.mbt`、`dcube.mbt`
+  - `homotopy/`：新增 `cubical_algorithms.mbt`、`circle_hit.mbt`
+  - `autonomy/`：`poset_sieve.mbt`、`affine_bide_morgan_cubical.mbt`
+  - `structures/`：`glue_hae_universe_classifier.mbt`
+
+### 階段二：補齊計算性單值性（Computational Univalence）、全代碼健檢與統計報告
+
+- **計算性單值性完整補齊（`kernel/` + `homotopy/` + `structures/`）**：
+  - 修正 `kernel/equiv_glue.mbt` 中 `glue_equiv_endpoint_parts` 於 `FTop` 塌縮端點誤保留 `parts.base` 之缺陷，確保非自同態等價 $A \simeq B$ 之 `coe (ua e) 0 1` 正確計算。
+  - 將 `ua_type_at` 升級為雙端 CCHM 形式 `Glue dst [(i=0, src, e), (i=1, dst, idEquiv dst)]`。
+  - 補齊並公開完整單值性構造與等式見證：語法與推理項 `DTerm::DPathToEquiv`（含 `eval_path_to_equiv_term`、`infer_path_to_equiv`、`dterm_conv_plausible`、`dterm_children`、`glue_collapse`），以及語義構造 `path_to_equiv_value`、`ua_beta_path_value`、`ua_beta_inv_path_value`、`ua_id_path_value`、`ua_eta_path_value`（含 `sq_cchm` 與中立類型 $B$ 情況下於 $\mathcal U$ 之 `hcomp` 橋接 `sq_bridge`）、`path_to_equiv_ua_beta_path_value` 與一等單值性等價 `univalence_equiv_value : Equiv (Equiv A B) (Path U A B)`。
+  - 將 `homotopy/circle_hit.mbt` 重複的 `path_to_equiv_value`、`ua_beta_path_value` 委派至 `@kernel`，並擴充 `@kernel.check_computational_univalence`（由 `check_dep_all` 自動執行，覆蓋閉合與開放中立上下文 $A, B : \mathcal U$）與 `@structures.verify_glue_hae_and_universe_classifier_suite`。
+- **全代碼健檢、除錯、去重、減債與清死碼**：
+  - 為 `algebra/monad.mbt` `Term` 補齊 `pub extend Term with Debug / Eq`，消除全部 `[0079]` 警告。
+  - 去重與刪除死碼：移除 `algebra/voa.mbt` 重複 `pow_int_local`（共用 `pow_int`）、`face_bdd/face_bdd.mbt` 重複 `sort_lit_conj`/`bdd_face_eq`（改用 `sort_ints`/`face_eq_mod`）、`kernel/kan_dep.mbt` 重複 `dv_is_bool`（改用 `dv_is_bool_dep`）、`cubical/univalence_wbtest.mbt` 重複 `some_or2`/`iso_exn2`（改用 `some_or`/`iso_exn`）；清除 13 處空 `///|` 文檔塊；移除 `cubical/comp.mbt`、`cubical/cubety.mbt`、`homotopy/cubical_algorithms.mbt`、`kernel/kan_ast.mbt` 共 7 處無效 `ignore(...)` 與死變數 `off_big`／`pt`。
+- **全數通過狀態**：`moon fmt --check`、`moon check --target wasm/native`（0 錯 0 警）、`moon test --target wasm/native`（44/44）、`moon run --target native bench` 及全部 12 套件 `check_*`/`verify_*` 執行期定理套件皆通過；已產出緊湊欄寬 `.xlsx` 統計報告（`alge3_stats_report.xlsx`）。
+

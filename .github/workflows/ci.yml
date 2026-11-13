@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, e124]
   pull_request:
-    branches: [main]
+    branches: [main, e124]
   workflow_dispatch:
 
 jobs:
@@ -32,6 +32,9 @@ jobs:
         run: |
           moon fmt
           git diff --exit-code || (echo "::error::moon fmt produced changes; run 'moon fmt' locally" && exit 1)
+
+      - name: Check
+        run: moon check --target ${{ matrix.target }}
 
       - name: Test
         run: moon test --target ${{ matrix.target }}

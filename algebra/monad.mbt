@@ -6,11 +6,18 @@
 ///
 /// `subst` is the Kleisli composition / monad multiplication.  The three
 /// substitution lemmas below are exactly the three monad laws.
+#derive(Debug, Eq)
 pub enum Term {
   Var(Int32)
   Lit(Int32)
   Node(Int32, Array[Term])
-} derive(Debug, Eq)
+}
+
+///|
+pub extend Term with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Term with Eq::{not_equal, equal}
 
 ///|
 pub fn Term::size(self : Term) -> Int32 {
