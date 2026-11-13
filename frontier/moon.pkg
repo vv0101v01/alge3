@@ -1,0 +1,9 @@
+import {
+  "arena/moonmath/algebra",
+  "arena/moonmath/core",
+  "arena/moonmath/cubical",
+  "arena/moonmath/derived",
+  "arena/moonmath/face_bdd",
+  "arena/moonmath/finite",
+  "moonbitlang/core/debug",
+}

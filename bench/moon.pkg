@@ -6,5 +6,6 @@ import {
   "arena/moonmath/algebra",
   "arena/moonmath/derived",
   "arena/moonmath/cubical",
+  "arena/moonmath/frontier",
   "moonbitlang/core/bench" @cbench,
 }

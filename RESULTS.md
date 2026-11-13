@@ -84,3 +84,86 @@ Total tests: 44, passed: 44, failed: 0.
   - `moon fmt --check`、`moon test --target wasm`（44/44）、`moon test --target native`（44/44）、`moon run --target native bench` 及所有 32 個執行期定理檢查器全數通過。
   - 統計報表已匯出至 `alge3_stats_report.xlsx`（緊湊多工作表排版，欄寬精簡不橫溢）。
 
+---
+
+## 6. 更新紀錄（2026-11-13 流水式追加：工具鏈升級、端點缺陷修復、frontier 十二主題）
+
+環境：Linux x86_64 sandbox；`moon 0.1.20261104`／`moonc v0.10.20+65efd5b93`；native target。
+
+### 6.1 基準（本次實測節選）
+
+```text
+rank 512x512 us: bitset 28195.65, scalar 1309529.66, speedup 46.44
+matmul 256 us: bitset 3870.51, scalar 407948.96, speedup 105.40
+bar construction BZ/2 degree 8 us: 5924.76
+surjection operad E(4) through degree 3 us: 247664.09
+Wick 16-point us: DP 15270.50, brute 688384.29, speedup 45.08
+Milnor number E8 us: 326.66
+ua-beta exhaustive Fin 6 (720 equivs) us: 6844.27
+comp in U x50 (Fin 6 lines) us: 2819.69
+frontier small cubical operators check us: 1254.11
+```
+
+### 6.2 缺陷修復與測試
+
+- 修復 `kernel/kan_ast.mbt` `glue_endpoint_parts`（`DVGlue`）於 `FTop` 塌縮端點誤保留 `parts.base` 之缺陷（改取 `generic.base`；非 ⊤ 端點保留 `parts.base`），並使 `comp_glue_value` 的底線 `a_line` 端點感知；與已修復之 `glue_equiv_endpoint_parts` 對稱。迴歸測試 `kernel/kernel_wbtest.mbt`：修復前 1 項斷言失敗（`base` 實得塌縮分部型別 `Nat` 而非底型別 `Bool`），修復後通過。
+
+```text
+moon test --target wasm
+Total tests: 59, passed: 59, failed: 0.
+moon test --target native
+Total tests: 59, passed: 59, failed: 0.
+```
+
+- 新增：`kernel` 2 項、`frontier` 13 項；原有 44 項不變。
+
+### 6.3 frontier 數學輸出（`moon run --target native bench` 節選）
+
+```text
+frontier suite all ok: true
+derived pullback betti (shifted): [0, 1]
+magnetic plaquette holonomy: [1, 0]
+complemented subobjects of const Bool presheaf: 4
+```
+
+十二主題（德摩根立方體代數、小立方體算子、可判定性與合流性、路徑類型局部可補性、形變函子與模塔、衍生纖維積、聯絡與曲率及水平分佈、泛覆疊空間、高維群胚模型、弱歐米茄群胚、伴隨邏輯、符號動態執行與 NbE 整合）的定義、模型與驗證方法見 `docs/frontier.md`；套件程式為 `frontier/{cubical_ops,path_local,derived_geo,logic_nbe,frontier}.mbt`，測試為 `frontier/frontier_wbtest.mbt`。
+
+---
+
+## 7. 更新紀錄（2026-11-13 流水式追加：大立方體 → 3 維）
+
+- 新增 `frontier/hypercube3d.mbt` 與 `frontier/hypercube_wbtest.mbt`（8 項），互動頁 `docs/hypercube3d.html` 與專文 `docs/hypercube3d.md`。
+- 管線：$I^n$ 胞腔複形 →（單對象 A∞ 模型 $m_1$）頂邊界 $z_n$ → 循環同調（$\rho$ 循環雙複形，$z_n$ 不變）→ 纖維積分 $\pi_!$ → $z_3=\partial[I^3]$ → 單值等價 `ua` transport 到 3 維影子類型；n=3,4,5 全驗，頂點纖維 $2^{n-3}$。
+
+```text
+moon test --target wasm
+Total tests: 67, passed: 67, failed: 0.
+moon test --target native
+Total tests: 67, passed: 67, failed: 0.
+hypercube3d pipeline ok: true
+big cube I^5 solid betti: [1, 0, 0, 0, 0, 0]
+top boundary dI^5 (= S^4) betti: [1, 0, 0, 0, 1]
+cyclic homology betti (low, n=5): [1, 0, 0, 0]
+projected top boundary facets pi_!(z_5): 6
+hypercube3d full check us: ~111326
+```
+
+- 附帶修復 `Bits::xor_inplace` 跨字長越界（短操作數零擴展）。
+
+---
+
+## 8. 更新紀錄（2026-11-13 流水式追加：spectral nexus）
+
+- 新增 `frontier/nexus_fft.mbt`、`frontier/nexus_geo.mbt`、`frontier/nexus_wbtest.mbt`（11 項），互動頁 `docs/nexus_fft.html` 與專文 `docs/nexus.md`（十個短語逐個標明有限模型解讀）。
+
+```text
+moon test --target wasm
+Total tests: 78, passed: 78, failed: 0.
+moon test --target native
+Total tests: 78, passed: 78, failed: 0.
+spectral nexus all ok: true
+butterfly ops (n=16): 32
+line bundles over C4 iso classes (monodromy): 4
+trefoil determinant: 3
+spectral nexus full check us: ~360966
+```

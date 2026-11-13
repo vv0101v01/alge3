@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>高維立方體 → 3 維可視化：A∞ 頂邊界 · 循環同調 · 單值等價</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Noto Sans TC", sans-serif;
+         background:#0b1020; color:#e8ecf8; }
+  header { padding:18px 22px 6px; }
+  h1 { font-size:20px; margin:0 0 6px; }
+  .sub { color:#9fb0d8; font-size:13px; line-height:1.6; max-width:1100px; }
+  .wrap { display:flex; gap:14px; padding:12px 18px 20px; flex-wrap:wrap; }
+  .panel { background:#121a33; border:1px solid #26325e; border-radius:12px; padding:14px 16px; }
+  .controls { width:295px; flex:0 0 295px; }
+  .view { flex:1 1 560px; min-width:340px; }
+  canvas { width:100%; height:620px; display:block; background:radial-gradient(ellipse at 50% 42%, #16224a 0%, #0b1020 68%);
+           border-radius:8px; cursor:grab; touch-action:none; }
+  canvas:active { cursor:grabbing; }
+  label.row { display:flex; align-items:center; gap:8px; margin:9px 0; font-size:14px; }
+  input[type=range] { width:100%; }
+  select, button { background:#1b2750; color:#e8ecf8; border:1px solid #3a4a86; border-radius:6px; padding:5px 9px; }
+  .nval { font-size:26px; font-weight:700; }
+  table { border-collapse:collapse; font-size:12.5px; width:100%; margin-top:8px; }
+  td, th { border-bottom:1px solid #26325e; padding:4px 6px; text-align:left; vertical-align:top; }
+  td.v { text-align:right; font-variant-numeric:tabular-nums; color:#ffd166; white-space:nowrap; }
+  .legend span { display:inline-block; margin:2px 8px 2px 0; font-size:12px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; }
+  .pipe { font-size:12.5px; line-height:1.75; color:#c6d2f2; }
+  .pipe b { color:#7be0c3; }
+  .note { font-size:12px; color:#8fa1cc; line-height:1.65; }
+  code { color:#ffd166; }
+</style>
+</head>
+<body>
+<header>
+  <h1>高維大立方體睇得見：I<sup>n</sup> →（A∞ 頂邊界 · 循環同調 · 單值等價）→ I<sup>3</sup></h1>
+  <div class="sub">
+    左邊揀維度 n，拖動畫面旋轉。彩色線係高維立方體經線性相機投到 3 維嘅像；
+    青色半透明面係「頂邊界影子」——大立方頂邊界 z<sub>n</sub>=∂[I<sup>n</sup>] 經纖維積分 π<sub>!</sub>
+    （沿被遺忘座標 I<sup>n−3</sup> 積分）送到嘅 3 維頂邊界 z<sub>3</sub>=∂[I<sup>3</sup>]，共 6 個面。
+    數學等價由 MoonBit 驗證（<code>frontier/hypercube3d.mbt</code>），相機本身只係顯示工具，唔係證明。
+  </div>
+</header>
+<div class="wrap">
+  <div class="panel controls">
+    <div>維度 n = <span class="nval" id="nval">5</span></div>
+    <input type="range" id="dim" min="3" max="7" step="1" value="5">
+    <label class="row"><input type="checkbox" id="showEdges" checked> 高維立方體邊（投影）</label>
+    <label class="row"><input type="checkbox" id="showVerts" checked> 高維頂點</label>
+    <label class="row"><input type="checkbox" id="showShadow" checked> 頂邊界影子 ∂I³（π<sub>!</sub> z<sub>n</sub>）</label>
+    <label class="row"><input type="checkbox" id="showSubdiv"> 小立方體細分（影子內 2×2×2）</label>
+    <label class="row"><input type="checkbox" id="showFiber"> 高亮一條纖維（同影子頂點嘅高維頂點）</label>
+    <label class="row">影子頂點（0–7）：
+      <select id="fiberSel">
+        <option>0</option><option>1</option><option>2</option><option>3</option>
+        <option>4</option><option>5</option><option selected>7</option><option>6</option>
+      </select>
+    </label>
+    <label class="row"><input type="checkbox" id="spin" checked> 自動旋轉（拖動可改角度）</label>
+    <button id="reset">重置視角</button>
+    <table>
+      <tr><td>頂點 2<sup>n</sup></td><td class="v" id="stV"></td></tr>
+      <tr><td>邊 n·2<sup>n−1</sup></td><td class="v" id="stE"></td></tr>
+      <tr><td>全部面 3<sup>n</sup></td><td class="v" id="stF"></td></tr>
+      <tr><td>頂邊界面數 2n</td><td class="v" id="stTop"></td></tr>
+      <tr><td>π<sub>!</sub> 後可見面</td><td class="v">6</td></tr>
+      <tr><td>每條纖維大小 2<sup>n−3</sup></td><td class="v" id="stFib"></td></tr>
+      <tr><td>實心立方 Betti</td><td class="v" id="stSolid"></td></tr>
+      <tr><td>頂邊界 Betti（S<sup>n−1</sup>）</td><td class="v" id="stBnd"></td></tr>
+      <tr><td>循環同調 Betti（低度數，MoonBit）</td><td class="v" id="stCyc"></td></tr>
+    </table>
+    <div class="legend" id="legend"></div>
+    <p class="note">座標軸 0、1、2 係保留嘅 3 維方向；軸 3+ 係被遺忘方向。
+    頂點影子 = 遺忘軸 3+ 後嘅商集；每個影子頂點有 2<sup>n−3</sup> 個高維原像（纖維）。</p>
+  </div>
+  <div class="panel view">
+    <canvas id="cv" width="1000" height="1240"></canvas>
+    <div class="pipe">
+      <b>點樣「等價」到 3 維（MoonBit 已驗）：</b>
+      大立方胞腔複形放入單對象 A∞ 模型，m<sub>1</sub>=胞腔邊界，頂胞腔嘅 m<sub>1</sub> 就係頂邊界 z<sub>n</sub>（∂z<sub>n</sub>=0）；
+      循環旋轉 ρ（座標輪換）保持 z<sub>n</sub>，故佢係循環雙複形（1−ρ, N）嘅循環循環；
+      纖維積分 π<sub>!</sub> 只留低「遺忘部分係成條纖維」嘅面，次數降 n−3，鏈映射驗證逐面成立，π<sub>!</sub>(z<sub>n</sub>)=z<sub>3</sub>；
+      最後影子面／頂點類型同 I³ 對應類型之間有顯式等價（Iso），ua 將佢變成有限宇宙中嘅路徑，
+      沿路徑 transport 計出嘅正係個影子映射本身（uaβ），即係「單值等價到 3 維空間」。
+      高維唔再睇唔見：睇唔見嘅遺忘方向被壓成纖維倍數（取消／重數），可見部分嚴格等於 3 維頂邊界。
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+let yaw = 0.7, pitch = -0.45, dragging = false, lastX = 0, lastY = 0;
+const AXIS_COLORS = ['#ff6b6b','#ffd166','#4ecdc4','#c792ea','#82aaff','#f78c6b','#7be0c3','#ff9cac'];
+function axisDir(j){
+  const t = [[1,0,0],[0,1,0],[0,0,1],[0.6,0.6,0.6],[0.6,-0.6,0.6],[-0.6,0.6,0.6]];
+  return t[j % 6];
+}
+function pointOf(v, n, keptOnly){
+  const p = [0,0,0];
+  const lim = keptOnly ? Math.min(3, n) : n;
+  for(let j=0;j<lim;j++){
+    const d = axisDir(j), s = ((v>>j)&1) ? 0.5 : -0.5;
+    p[0]+=s*d[0]; p[1]+=s*d[1]; p[2]+=s*d[2];
+  }
+  return p;
+}
+function rotate(p){
+  const cy=Math.cos(yaw), sy=Math.sin(yaw), cp=Math.cos(pitch), sp=Math.sin(pitch);
+  const x1 = p[0]*cy - p[2]*sy, z1 = p[0]*sy + p[2]*cy;
+  const y2 = p[1]*cp - z1*sp, z2 = p[1]*sp + z1*cp;
+  return [x1,y2,z2];
+}
+function project(p, W, H, n){
+  const r = rotate(p);
+  const persp = 3.4/(3.4 + r[2]*0.35);
+  const scale = Math.min(W,H)*0.30/Math.sqrt(Math.max(3,n))*1.55*persp;
+  return [W/2 + r[0]*scale, H*0.46 - r[1]*scale, r[2]];
+}
+function stats(n){
+  $('nval').textContent = n;
+  $('stV').textContent = Math.pow(2,n);
+  $('stE').textContent = n*Math.pow(2,n-1);
+  $('stF').textContent = Math.pow(3,n);
+  $('stTop').textContent = 2*n;
+  $('stFib').textContent = Math.pow(2,n-3);
+  $('stSolid').textContent = '[' + [1].concat(Array(n).fill(0)).join(', ') + ']';
+  $('stBnd').textContent = '[' + Array.from({length:n},(_,k)=>(k===0||k===n-1)?1:0).join(', ') + ']';
+  const cyc = {3:'[1, 0, 1, 0]',4:'[1, 1, 1, 2]',5:'[1, 0, 0, 0]'};
+  $('stCyc').textContent = cyc[n] || ('n≤5 已驗；n=' + n + ' 僅畫投影');
+  let lg = '';
+  for(let j=0;j<n;j++) lg += '<span><span class="dot" style="background:'+AXIS_COLORS[j%8]+'"></span>軸 '+j+(j<3?'（保留）':'（遺忘）')+'</span>';
+  $('legend').innerHTML = lg;
+}
+function draw(){
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+  const n = parseInt($('dim').value,10);
+  stats(n);
+  const N = Math.pow(2,n);
+  const pts = [], sh = [];
+  for(let v=0;v<N;v++) pts.push(project(pointOf(v,n,false), W, H, n));
+  for(let s=0;s<8;s++) sh.push(project(pointOf(s,n,true), W, H, n));
+  // shadow top-boundary facets (filled), the image pi_!(z_n) = dI^3
+  if($('showShadow').checked){
+    const faces = [];
+    for(let a=0;a<3;a++) for(let side=0;side<2;side++){
+      const others=[0,1,2].filter(x=>x!==a);
+      const corners=[0,1,2,3].map(t=>{
+        let v=side<<a;
+        if(t&1) v|=1<<others[0];
+        if(t&2) v|=1<<others[1];
+        return v;
+      });
+      const cen = corners.reduce((acc,v)=>acc+sh[v][2],0)/4;
+      faces.push({a,side,corners,cen});
+    }
+    faces.sort((x,y)=>x.cen-y.cen);
+    for(const f of faces){
+      ctx.beginPath();
+      f.corners.forEach((v,i)=>{ const p=sh[v]; i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); });
+      ctx.closePath();
+      ctx.fillStyle = AXIS_COLORS[f.a] + '2e';
+      ctx.fill();
+      ctx.strokeStyle = AXIS_COLORS[f.a];
+      ctx.lineWidth = 3.2;
+      ctx.stroke();
+    }
+  }
+  // subdivision of the shadow into 2x2x2 small cubes
+  if($('showSubdiv').checked){
+    ctx.strokeStyle='rgba(230,238,255,0.55)'; ctx.lineWidth=1.1;
+    const base=[];
+    for(let mx=0;mx<2;mx++)for(let my=0;my<2;my++)for(let mz=0;mz<2;mz++){
+      const c=[mx?0.25:-0.25, my?0.25:-0.25, mz?0.25:-0.25];
+      const corner=(dx,dy,dz)=>project([c[0]+dx,c[1]+dy,c[2]+dz],W,H,n);
+      const cs=[];
+      for(let t=0;t<8;t++) cs.push(corner((t&1)?0.25:-0.25,(t&2)?0.25:-0.25,(t&4)?0.25:-0.25));
+      for(let v=0;v<8;v++)for(let j=0;j<3;j++){
+        const w=v|(1<<j);
+        if(w>v){ ctx.beginPath(); ctx.moveTo(cs[v][0],cs[v][1]); ctx.lineTo(cs[w][0],cs[w][1]); ctx.stroke(); }
+      }
+    }
+  }
+  // hypercube edges, painter-sorted by depth
+  if($('showEdges').checked){
+    const segs=[];
+    for(let v=0;v<N;v++)for(let j=0;j<n;j++){
+      if(!((v>>j)&1)){
+        const w=v|(1<<j);
+        segs.push({v,w,j,z:(pts[v][2]+pts[w][2])/2});
+      }
+    }
+    segs.sort((a,b)=>a.z-b.z);
+    for(const s of segs){
+      ctx.beginPath();
+      ctx.moveTo(pts[s.v][0],pts[s.v][1]);
+      ctx.lineTo(pts[s.w][0],pts[s.w][1]);
+      ctx.strokeStyle = AXIS_COLORS[s.j%8];
+      ctx.globalAlpha = s.j<3 ? 0.95 : 0.5;
+      ctx.lineWidth = s.j<3 ? 2.0 : 1.3;
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+  // fiber highlight: all big vertices over the chosen shadow vertex
+  const sel = parseInt($('fiberSel').value,10);
+  if($('showFiber').checked){
+    ctx.strokeStyle='rgba(255,209,102,0.5)'; ctx.lineWidth=1; ctx.setLineDash([5,5]);
+    for(let v=0;v<N;v++){
+      if((v&7)===sel){
+        ctx.beginPath(); ctx.moveTo(sh[sel][0],sh[sel][1]); ctx.lineTo(pts[v][0],pts[v][1]); ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(sh[sel][0],sh[sel][1],10,0,7);
+    ctx.strokeStyle='#ffd166'; ctx.lineWidth=3; ctx.stroke();
+  }
+  if($('showVerts').checked){
+    for(let v=0;v<N;v++){
+      const hot = $('showFiber').checked && ((v&7)===sel);
+      ctx.beginPath(); ctx.arc(pts[v][0],pts[v][1],hot?6:3.4,0,7);
+      ctx.fillStyle = hot ? '#ffd166' : '#e8ecf8';
+      ctx.fill();
+    }
+  }
+  ctx.fillStyle='#9fb0d8'; ctx.font='26px system-ui';
+  ctx.fillText('I^'+n+' 投影（'+N+' 頂點） · 青/紅/黃粗面 = π_!(∂I^'+n+') = ∂I^3', 26, 40);
+}
+function loop(){ if($('spin').checked && !dragging){ yaw += 0.006; } draw(); requestAnimationFrame(loop); }
+cv.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e=>{ if(dragging){ yaw += (e.clientX-lastX)*0.008; pitch += (e.clientY-lastY)*0.008; pitch=Math.max(-1.4,Math.min(1.4,pitch)); lastX=e.clientX; lastY=e.clientY; } });
+cv.addEventListener('pointerup', ()=>{ dragging=false; });
+$('reset').addEventListener('click', ()=>{ yaw=0.7; pitch=-0.45; });
+['dim','showEdges','showVerts','showShadow','showSubdiv','showFiber','fiberSel'].forEach(id=>$(id).addEventListener('input', draw));
+loop();
+</script>
+</body>
+</html>

@@ -12,12 +12,13 @@ Repository: <https://github.com/vv0101v01/alge3>
 - **algebra**：自由 Monad 與 substitution、Eilenberg–Moore fold、常數摺疊、A∞（Stasheff）、E∞（surjection operad 可縮性）、VOA（Heisenberg 模式、Wick DP、特徵標、rank variety）。
 - **derived**：加權齊次奇點的 Milnor／Tjurina 數與 Hilbert 函數（ADE）、箭圖表示的 Ext⁰/Ext¹。
 - **cubical**：把單價公理變成立方體演算法——區間的 De Morgan 代數、面格、Glue 類型、comp/hcomp/transp、$\mathsf{ua}$ 與 uaβ 計算（有限立方體模型，專文 `docs/cubical.md`）。
+- **frontier**：十二個主題的有限可判定模型——德摩根立方體代數與小立方體算子、重寫可判定性與合流性、路徑類型局部可補性、形變函子與模塔、衍生纖維積、聯絡與曲率及水平分佈、泛覆疊空間、高維群胚模型、弱歐米茄群胚、伴隨邏輯、符號動態執行與 NbE 整合（專文 `docs/frontier.md`）。
 - **bench**：可執行基準；**docs/paper.md**：定理、定義、算式與複雜度分析。
 
 ## 工具鏈
 
 ```text
-moon 0.1.20261012 / moonc v0.10.15+943464bfa (2026-10-12)
+moon 0.1.20261104 / moonc v0.10.20+65efd5b93 (2026-11-04)
 ```
 
 安裝：`curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash`，然後 `export PATH="$HOME/.moon/bin:$PATH"`。
@@ -28,8 +29,8 @@ moon 0.1.20261012 / moonc v0.10.15+943464bfa (2026-10-12)
 git clone https://github.com/vv0101v01/alge3.git
 cd alge3
 export PATH="$HOME/.moon/bin:$PATH"
-moon test --target wasm        # 44/44
-moon test --target native      # 44/44
+moon test --target wasm        # 59/59
+moon test --target native      # 59/59
 moon run --target native bench # 數學摘要 + 基準
 ```
 
@@ -84,6 +85,8 @@ homotopy/   單形複形、內角填充、神經／棒複形、correspondence
 algebra/    自由 Monad、A∞、E∞（surjection operad）、VOA
 derived/    Milnor／Tjurina、Hilbert 函數、箭圖 Ext
 cubical/    區間/面格、CubeTy、Glue、comp、ua（立方體單價）
+kernel/     依賴 NbE、Kan 運算、Glue/等價與計算性單價
+frontier/   形變/衍生纖維積/聯絡曲率/覆疊/群胚/伴隨/NbE 整合（見 docs/frontier.md）
 bench/      可執行基準（moonbitlang/core/bench）
 docs/       paper.md / paper.html、cubical.md / cubical.html
 scripts/    check.sh
@@ -130,3 +133,22 @@ scripts/    check.sh
   - 去重與刪除死碼：移除 `algebra/voa.mbt` 重複 `pow_int_local`（共用 `pow_int`）、`face_bdd/face_bdd.mbt` 重複 `sort_lit_conj`/`bdd_face_eq`（改用 `sort_ints`/`face_eq_mod`）、`kernel/kan_dep.mbt` 重複 `dv_is_bool`（改用 `dv_is_bool_dep`）、`cubical/univalence_wbtest.mbt` 重複 `some_or2`/`iso_exn2`（改用 `some_or`/`iso_exn`）；清除 13 處空 `///|` 文檔塊；移除 `cubical/comp.mbt`、`cubical/cubety.mbt`、`homotopy/cubical_algorithms.mbt`、`kernel/kan_ast.mbt` 共 7 處無效 `ignore(...)` 與死變數 `off_big`／`pt`。
 - **全數通過狀態**：`moon fmt --check`、`moon check --target wasm/native`（0 錯 0 警）、`moon test --target wasm/native`（44/44）、`moon run --target native bench` 及全部 12 套件 `check_*`/`verify_*` 執行期定理套件皆通過；已產出緊湊欄寬 `.xlsx` 統計報告（`alge3_stats_report.xlsx`）。
 
+### 階段三：最新穩定版工具鏈、端點 `parts.base` 缺陷修復、frontier 十二主題實做
+
+- **工具鏈升級**：安裝最新穩定版 `moon 0.1.20261104 / moonc v0.10.20+65efd5b93 (2026-11-04)`；核查 2026-11 新語法（`#derive` 前置屬性、`Int32/UInt32`、`extenum` 新式、`reb"..."`、`declare let`、`Json` 遷移）後確認本倉庫已相容，`moon fmt --check`、`moon check --deny-warn`（wasm/native）零修改通過，僅更新工具鏈字串（`bench` 與本文件）。
+- **缺陷修復（縮端點誤保留 `parts.base`）**：`kernel/kan_ast.mbt` 的 `DVGlue` 版 `glue_endpoint_parts` 在重構已塌縮端點的 Glue 結構時無條件保留 `parts.base`——當特化定義域面為 `FTop` 時該值是塌縮後的分部型別而非 Glue 的底型別（`DVGlueEquiv` 版此前已修、`DVGlue` 版遺留）。已改為面為 ⊤ 時取 `generic.base`、否則保留 `parts.base`，並將 `comp_glue_value` 的底線 `a_line` 改經端點感知的 `glue_endpoint_parts` 讀取；新增 `kernel/kernel_wbtest.mbt` 兩項迴歸測試（修復前失敗、修復後通過）。詳見 `docs/frontier.md` §2。
+- **新套件 `frontier/`（DAG 頂層，依賴 core/cubical/derived/face_bdd/finite）**：以有限窮舉模型實做並驗證——德摩根立方體代數、小立方體算子（面／退化／反轉／連結）、維度項重寫之可判定性與合流性、路徑類型局部可補性（`MiniTy` 預層判定）、形變函子與模塔（`A₂` 展開、`μ=τ=2`、截斷塔纖維 `p²`）、衍生纖維積（移位複形、Tor 修正 Betti）、聯絡與曲率及水平分佈（環面格聯絡、磁性格 holonomy 為對換）、泛覆疊空間（`Z → C₆` 唯一提升與繞數）、高維群胚模型（覆疊提升決定的 `S¹`／`T²` 基本群胚）、弱歐米茄群胚（骨架範疇群攜帶進位 3-上閉鏈結合子，五邊形窮舉）、伴隨邏輯（Heyting／量詞三元組／Galois 連接及伴隨存在性判定）、符號動態執行與 NbE 整合（路徑條件分割、每葉軌跡等於 NbE 範式）。`verify_frontier_suite()` 逐項匯報全數通過。
+- **全數通過狀態（更新）**：`moon test --target wasm/native` 由 44/44 增至 **59/59**（kernel +2、frontier +13），`moon run --target native bench` 新增 frontier 匯報（`frontier suite all ok: true`、衍生拉回 Betti `[0, 1]`、磁性格 holonomy `[1, 0]`、可補子對象計數 `4`）。
+
+### 階段四：大立方體到 3 維——A∞ 頂邊界、循環同調、單值等價影子
+
+- **新模組 `frontier/hypercube3d.mbt`（+ `frontier/hypercube_wbtest.mbt` 8 項測試）**：把高維「睇唔見」問題做成可驗證的降維管線——大小立方體胞腔複形（面編碼、實心 Betti `[1,0,…]`、頂邊界 Betti 即 $S^{n-1}$、小立方細分的內部面相消）；單對象 A∞ 模型中 $m_1$（胞腔邊界）作用於頂胞腔給出頂邊界 $z_n$（$\partial z_n=0$，A∞ 證書建至 n=3、組合複形驗至 n=5）；循環同調由座標循環輪換 $\rho$ 的 $(1-\rho, N)$ 循環雙複形計算（$z_n$ 為 $\rho$-不變循環循環，低度數 Betti：n=3 為 `[1,0,1,0]`、n=5 為 `[1,0,0,0]`）；纖維積分 $\pi_!$（面存活 ⟺ 遺忘部分為整條纖維 $I^{n-3}$，鏈映射逐面驗）嚴格給出 $\pi_!(z_n)=z_3$（6 個面）；影子面／頂點類型與 $I^3$ 對應類型間的顯式等價經 `ua` 變成有限宇宙路徑，transport 計算回等價本身（uaβ 與往返皆驗）。頂點纖維大小恆為 $2^{n-3}$。
+- **互動可視化 `docs/hypercube3d.html`**：單檔零依賴畫面，可調 n=3..7、旋轉高維投影線框、開關頂邊界影子 $\partial I^3$、2×2×2 小立方細分與纖維高亮；專文 `docs/hypercube3d.md` 說明管線與誠實邊界（等價是纖維積分／商集與循環截斷後的影子類型之間，相機僅為顯示）。
+- **附帶修復**：`core/bitset.mbt` 的 `Bits::xor_inplace` 在兩操作數字長不同（維度跨 64 位邊界）時會讀越界，改為短操作數零擴展；立方體複形的 $d^2=0$ 改以精確位長自有檢查逐列驗證。
+- **全數通過狀態（更新）**：`moon test --target wasm/native` 增至 **67/67**（frontier 13→21），`moon run --target native bench` 新增 hypercube 匯報（`hypercube3d pipeline ok: true`、$I^5$ 實心 Betti `[1,0,0,0,0,0]`、頂邊界 Betti `[1,0,0,0,1]`、循環 Betti `[1,0,0,0]`、投影後頂邊界面數 `6`、全檢查約 111 ms）。
+
+### 階段五：穩定光譜蝶形 FFT 與九個幾何／範疇有限模型（nexus）
+
+- **新模組 `frontier/nexus_fft.mbt` + `frontier/nexus_geo.mbt`（+ `nexus_wbtest.mbt` 11 項）**：把十個短語落實為精確有限模型——穩定光譜束聯快葉 FFT（有限域 NTT $p=998244353$：蝶形／遞歸葉／樸素 DFT 三方互驗、位移定理、Parseval、卷積）；同倫環空間模切雙射（繞數 ↔ 覆疊提升甲板端點、$w\bmod 4\mapsto 6w\bmod 24$）；愛因斯坦 boost 範疇（$\mathbb F_{13}$ 上 12 個洛倫茲態射、速度加法、Minkowski 區間不變）；格與構重構（Birkhoff：$B_3$ 與約數格 $D(12)$ 由 join-不可約元重構）；超方體全對偶／黎曼／超分次／對蹠折（$n=4$ 面對偶反轉包含、$n=5$ 加權圖距離 = 加權曼哈頓、奇偶分次、32 頂點折 16 對）；穩定自旋算子（$Cl(2)$ 12 轉子、保範、雙覆蓋核 $\{\pm1\}$）；葉子遞歸樹同態幾何（四點條件、剪枝 1-Lipschitz、fold 同態）；全映射收斂（256 個 $\mathrm{Fin}\,4$ 映射 $f^{16}=f^4$、冪等 41、雙射 24、逆像纖維劃分）；向量束範疇特徵（$C_4$ 線束以單值分類、同構類 4）；結同調行列式（unknot 1、三葉 3、八字 5）與循環蝶形 FFT。解讀方式逐節寫明於 `docs/nexus.md`。
+- **互動可視化 `docs/nexus_fft.html`**：蝶形合并逐步動畫（葉子位元反轉 → 逐級縫合 → 頻譜），附來回／Parseval／位移定理即時誤差與 MoonBit 實算對照表。
+- **全數通過狀態（更新）**：`moon test --target wasm/native` 增至 **78/78**（frontier 21→32），`bench` 新增 nexus 匯報（`spectral nexus all ok: true`、蝶形運算 32、線束同構類 4、三葉行列式 3、全檢查約 361 ms）。

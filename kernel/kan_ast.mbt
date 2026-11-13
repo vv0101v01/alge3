@@ -466,11 +466,25 @@ fn glue_endpoint_parts(
       )
     }
     let system = DSystem::{ branches: bs, }
+    let face = dsystem_domain_face(system)
     DGlueParts::{
       system,
-      face: dsystem_domain_face(system),
+      face,
       line: generic.line,
-      base: parts.base,
+      // At a top-collapsed endpoint `parts.base` is the collapsed
+      // endpoint type itself (the partial type the Glue reduces to
+      // there), not the underlying base type of the Glue.  Retaining
+      // it would compose/convert base components at the wrong type
+      // (the `FTop` defect already fixed for `DVGlueEquiv` in
+      // `glue_equiv_endpoint_parts`); the true base is the generic
+      // Glue's base.  At a non-top (in particular bottom) endpoint
+      // the Glue collapses to its base, so `parts.base` already is
+      // the base type and is kept.
+      base: if face_is_top_sem(face) {
+        generic.base
+      } else {
+        parts.base
+      },
       level: generic.level,
     }
   } else {
@@ -582,7 +596,12 @@ pub fn comp_glue_value(
   base : DValue,
   dlevel : Int32,
 ) -> DValue {
-  let a_line = (j : Dim) => glue_at(line, j).base
+  // The base line must be read through `glue_endpoint_parts`, not
+  // `glue_at`: at a collapsed endpoint `glue_at` reports the
+  // collapsed endpoint type as its `base`, which at a top face is
+  // the partial type rather than the Glue's base type (mirroring
+  // `comp_glue_equiv_value`, whose `a_line` is endpoint-aware).
+  let a_line = (j : Dim) => glue_endpoint_parts(line, j, dlevel).base
   let packed_base = glue_pack_at(line, DZero, base, dlevel)
   let src = glue_endpoint_parts(line, DZero, dlevel)
   let tgt = glue_endpoint_parts(line, DOne, dlevel)

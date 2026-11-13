@@ -117,7 +117,15 @@ pub fn Bits::xor(self : Bits, other : Bits) -> Bits {
 
 ///|
 pub fn Bits::xor_inplace(self : Bits, other : Bits) -> Unit {
-  for i in 0..<self.words.length() {
+  // A shorter `other` is zero-extended (its missing words are 0);
+  // iterating to the shorter length keeps this total on bit
+  // vectors whose word counts differ across a 64-bit boundary.
+  let n = if other.words.length() < self.words.length() {
+    other.words.length()
+  } else {
+    self.words.length()
+  }
+  for i in 0..<n {
     self.words[i] = self.words[i] ^ other.words[i]
   }
 }

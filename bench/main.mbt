@@ -107,7 +107,7 @@ fn time_us(f : () -> Unit, reps : Int32) -> Double {
 ///|
 fn main {
   println("MoonBit derived-mathematics benchmark")
-  println("toolchain: moonc v0.10.15, target native")
+  println("toolchain: moon 0.1.20261104 / moonc v0.10.20, target native")
   let sink = [0]
 
   // 1. Rank over GF(2): bit-parallel vs scalar.
@@ -315,4 +315,68 @@ fn main {
   ])
   let (ext0, ext1) = rep.ext01()
   println("Kronecker Ext^0, Ext^1: \{ext0}, \{ext1}")
+
+  // Frontier layer: De Morgan / small operators / confluence, path
+  // complement, deformation tower, derived pullback, connection and
+  // curvature, coverings, higher and weak omega groupoids, adjoint
+  // logic, symbolic execution with NbE.
+  let frontier = @frontier.verify_frontier_suite()
+  println("frontier suite all ok: \{frontier.all_ok()}")
+  println(
+    "derived pullback betti (shifted): \{@core.ints_to_s(frontier.derived_pullback_betti)}",
+  )
+  println(
+    "magnetic plaquette holonomy: \{@core.ints_to_s(frontier.plaquette_holonomy)}",
+  )
+  println(
+    "complemented subobjects of const Bool presheaf: \{frontier.complemented_subobject_count}",
+  )
+  let s14 = time_us(
+    () => {
+      sink[0] = sink[0] +
+        (if @frontier.check_small_cubical_operators() { 1 } else { 0 })
+    },
+    5,
+  )
+  println("frontier small cubical operators check us: \{s14}")
+
+  // Hypercube -> 3D: big cube top boundary (A-infinity m1), cyclic
+  // homology, fiber integration pi_!, univalence shadow.
+  println("hypercube3d pipeline ok: \{frontier.hypercube3d_ok}")
+  println(
+    "big cube I^5 solid betti: \{@core.ints_to_s(frontier.hypercube_solid_betti)}",
+  )
+  println(
+    "top boundary dI^5 (= S^4) betti: \{@core.ints_to_s(frontier.hypercube_boundary_betti)}",
+  )
+  println(
+    "cyclic homology betti (low, n=5): \{@core.ints_to_s(frontier.hypercube_cyclic_betti_low)}",
+  )
+  println(
+    "projected top boundary facets pi_!(z_5): \{frontier.hypercube_projected_boundary_facets}",
+  )
+  let s15 = time_us(
+    () => {
+      sink[0] = sink[0] + (if @frontier.check_hypercube3d() { 1 } else { 0 })
+    },
+    5,
+  )
+  println("hypercube3d full check us: \{s15}")
+
+  // Spectral nexus: butterfly FFT, loop spaces, boosts, lattices,
+  // spin, trees, bundles, knots.
+  println("spectral nexus all ok: \{frontier.spectral_nexus_ok}")
+  println("butterfly ops (n=16): \{frontier.butterfly_ops_16}")
+  println(
+    "line bundles over C4 iso classes (monodromy): \{frontier.bundle_iso_classes}",
+  )
+  println("trefoil determinant: \{frontier.trefoil_determinant}")
+  let s16 = time_us(
+    () => {
+      sink[0] = sink[0] +
+        (if @frontier.check_spectral_nexus_all() { 1 } else { 0 })
+    },
+    5,
+  )
+  println("spectral nexus full check us: \{s16}")
 }

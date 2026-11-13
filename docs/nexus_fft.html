@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>循環蝶形 FFT · 穩定光譜 — 互動蝶形圖</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Noto Sans TC", sans-serif; background:#0b1020; color:#e8ecf8; }
+  header { padding:18px 22px 6px; }
+  h1 { font-size:20px; margin:0 0 6px; }
+  .sub { color:#9fb0d8; font-size:13px; line-height:1.65; max-width:1150px; }
+  .wrap { display:flex; gap:14px; padding:12px 18px 20px; flex-wrap:wrap; }
+  .panel { background:#121a33; border:1px solid #26325e; border-radius:12px; padding:14px 16px; }
+  .controls { width:300px; flex:0 0 300px; }
+  .view { flex:1 1 560px; min-width:340px; }
+  canvas { width:100%; height:560px; display:block; background:radial-gradient(ellipse at 50% 40%, #16224a 0%, #0b1020 70%); border-radius:8px; }
+  label.row { display:block; margin:10px 0; font-size:14px; }
+  select, button { background:#1b2750; color:#e8ecf8; border:1px solid #3a4a86; border-radius:6px; padding:5px 9px; }
+  input[type=range] { width:100%; }
+  table { border-collapse:collapse; font-size:12.5px; width:100%; margin-top:8px; }
+  td, th { border-bottom:1px solid #26325e; padding:4px 6px; text-align:left; }
+  td.v { text-align:right; font-variant-numeric:tabular-nums; color:#ffd166; white-space:nowrap; }
+  .pipe { font-size:12.5px; line-height:1.8; color:#c6d2f2; }
+  .pipe b { color:#7be0c3; }
+  code { color:#ffd166; }
+  .note { font-size:12px; color:#8fa1cc; line-height:1.65; }
+</style>
+</head>
+<body>
+<header>
+  <h1>循環蝶形 FFT：葉子（位元反轉）→ 蝶形合并 → 穩定光譜</h1>
+  <div class="sub">
+    拖動「階段」滑桿逐步睇蝶形合并：最左係位元反轉後嘅葉子（leaves），每一級把兩個細譜用旋轉因子（twiddle）
+    『『縫』』成大一倍嘅譜——即程式入面嘅譜束聯（spectral-sheaf gluing）。最右係頻譜幅度。
+    MoonBit 驗證用嘅係有限域 NTT（p = 998244353），所有恆等式精確成立；呢頁用複數 FFT 畫圖，數值只作顯示。
+  </div>
+</header>
+<div class="wrap">
+  <div class="panel controls">
+    <label class="row">長度 N：
+      <select id="nsel"><option value="8">8</option><option value="16" selected>16</option></select>
+    </label>
+    <label class="row">信號：
+      <select id="sig">
+        <option value="ramp">斜坡 0,1,2,…</option>
+        <option value="impulse">脈衝 δ₁</option>
+        <option value="square">方波</option>
+        <option value="mix" selected>混合（兩粒音）</option>
+      </select>
+    </label>
+    <label class="row">階段 stage：<span id="stageVal">全部</span>
+      <input type="range" id="stage" min="0" max="4" step="1" value="4">
+    </label>
+    <button id="play">▶ 播放合并</button>
+    <button id="shiftBtn">驗證位移定理（循環位移 3）</button>
+    <table>
+      <tr><td>蝶形運算次數 (N/2)·log₂N</td><td class="v" id="stOps"></td></tr>
+      <tr><td>樸素 DFT 運算 N²</td><td class="v" id="stNaive"></td></tr>
+      <tr><td>來回誤差 max|IFFT(FFT x) − x|</td><td class="v" id="stRt"></td></tr>
+      <tr><td>Parseval 誤差</td><td class="v" id="stPar"></td></tr>
+      <tr><td>位移定理誤差</td><td class="v" id="stShift">—</td></tr>
+    </table>
+    <p class="note">MoonBit 已驗（有限域精確版）：蝶形 = 遞歸葉 FFT = 樸素 DFT（N=4,8,16）；
+    來回恆等；位移定理；Parseval 恆等式；線性／循環卷積同樸素定義一致。</p>
+    <table>
+      <tr><th colspan="2">同一批 nexus 模型（MoonBit 實算）</th></tr>
+      <tr><td>環空間 ΩS¹ 模切雙射</td><td class="v">繞數 ↔ 甲板端點 6w</td></tr>
+      <tr><td>愛因斯坦 boost 範疇（F₁₃）</td><td class="v">12 個 morphism</td></tr>
+      <tr><td>格重構（Birkhoff）</td><td class="v">B₃ 與 12 約數格</td></tr>
+      <tr><td>超方體對偶／黎曼／超 grading</td><td class="v">n=4 對偶 · n=5 度量</td></tr>
+      <tr><td>穩定自旋算子（Cl(2) 轉子）</td><td class="v">12 轉子 · 核 {±1}</td></tr>
+      <tr><td>遞歸樹同態幾何</td><td class="v">四點條件全驗</td></tr>
+      <tr><td>全映射收斂（Fin4→Fin4）</td><td class="v">256 個 · 冪等 41</td></tr>
+      <tr><td>向量束範疇（C₄ 上線束）</td><td class="v">同構類 = 4（單值）</td></tr>
+      <tr><td>結決定子（同調）</td><td class="v">unknot 1 · 三葉 3 · 8字 5</td></tr>
+    </table>
+  </div>
+  <div class="panel view">
+    <canvas id="cv" width="1100" height="1120"></canvas>
+    <div class="pipe">
+      <b>點讀呢張圖：</b>每一級（stage）右邊嘅每個節點，都係左邊兩個子譜喺對應頻率上用
+      <code>u ± ωᵏ·v</code> 縫合而成；全部縫完就得到完整頻譜。循環卷積就係「頻譜逐點相乘再逆變換」，
+      所以蝶形圖同時係線性卷積、循環卷積同譜穩定性（位移只改相位、Parseval 守恆）嘅共同引擎。
+      其餘幾何／範疇主題嘅定義同驗證方法見 <code>docs/nexus.md</code>。
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+function signal(n, kind){
+  const x = [];
+  for(let i=0;i<n;i++){
+    if(kind==='ramp') x.push(i);
+    else if(kind==='impulse') x.push(i===1?1:0);
+    else if(kind==='square') x.push(i < n/2 ? 1 : -1);
+    else x.push(Math.sin(2*Math.PI*2*i/n) + 0.6*Math.sin(2*Math.PI*5*i/n + 0.7));
+  }
+  return x;
+}
+function bitrev(x, bits){ let r=0; for(let i=0;i<bits;i++) if((x>>i)&1) r |= 1<<(bits-1-i); return r; }
+function fftStages(x){
+  const n = x.length, bits = Math.log2(n);
+  const a = [];
+  for(let i=0;i<n;i++) a.push([x[bitrev(i,bits)], 0]);
+  const stages = [a.map(v=>v.slice())];
+  for(let len=2; len<=n; len*=2){
+    for(let b=0;b<n;b+=len){
+      for(let j=0;j<len/2;j++){
+        const ang = -2*Math.PI*j/len, wr = Math.cos(ang), wi = Math.sin(ang);
+        const u = a[b+j], v = a[b+j+len/2];
+        const tr = v[0]*wr - v[1]*wi, ti = v[0]*wi + v[1]*wr;
+        a[b+j] = [u[0]+tr, u[1]+ti];
+        a[b+j+len/2] = [u[0]-tr, u[1]-ti];
+      }
+    }
+    stages.push(a.map(v=>v.slice()));
+  }
+  return stages;
+}
+function draw(){
+  const n = parseInt($('nsel').value,10);
+  const stages = fftStages(signal(n, $('sig').value));
+  const maxStage = stages.length - 1;
+  const st = Math.min(parseInt($('stage').value,10), maxStage);
+  $('stage').max = maxStage;
+  $('stageVal').textContent = st === maxStage ? '全部（完成）' : ('stage ' + st + ' / ' + maxStage);
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+  const cols = stages.length, rows = n;
+  const x0 = 60, x1 = W - 190, y0 = 50, y1 = H - 90;
+  const dx = (x1-x0)/(cols-1), dy = (y1-y0)/(rows-1);
+  // edges up to current stage
+  for(let s=0;s<st;s++){
+    const len = Math.pow(2, s+1);
+    ctx.strokeStyle = 'rgba(123,224,195,0.5)'; ctx.lineWidth = 1.1;
+    for(let b=0;b<n;b+=len){
+      for(let j=0;j<len/2;j++){
+        for(const src of [b+j, b+j+len/2]){
+          for(const dst of [b+j, b+j+len/2]){
+            ctx.beginPath();
+            ctx.moveTo(x0+s*dx, y0+src*dy);
+            ctx.lineTo(x0+(s+1)*dx, y0+dst*dy);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+  }
+  // nodes
+  for(let s=0;s<cols;s++){
+    for(let r=0;r<rows;r++){
+      const v = stages[s][r], mag = Math.hypot(v[0], v[1]);
+      const active = s <= st;
+      ctx.beginPath();
+      ctx.arc(x0+s*dx, y0+r*dy, 4 + Math.min(7, mag*0.55), 0, 7);
+      ctx.fillStyle = !active ? '#33406e' : (s===0 ? '#ffd166' : (s===cols-1 ? '#7be0c3' : '#82aaff'));
+      ctx.fill();
+    }
+    ctx.fillStyle = '#9fb0d8'; ctx.font = '20px system-ui';
+    ctx.fillText(s===0 ? '葉子' : ('stage '+s), x0+s*dx-22, y0-22);
+  }
+  // spectrum bars at final column
+  const spec = stages[cols-1];
+  let maxm = 0.0001;
+  for(const v of spec) maxm = Math.max(maxm, Math.hypot(v[0], v[1]));
+  ctx.fillStyle = '#9fb0d8'; ctx.font = '20px system-ui';
+  ctx.fillText('頻譜 |X_k|', x1+18, y0-22);
+  for(let r=0;r<rows;r++){
+    const mag = Math.hypot(spec[r][0], spec[r][1]);
+    ctx.fillStyle = '#4ecdc4';
+    ctx.fillRect(x1+18, y0+r*dy-7, 130*mag/maxm, 14);
+  }
+  // stats
+  $('stOps').textContent = (n/2)*Math.log2(n);
+  $('stNaive').textContent = n*n;
+  // roundtrip via inverse (conjugate trick)
+  const X = spec;
+  let rt = 0;
+  const xorig = signal(n, $('sig').value);
+  for(let i=0;i<n;i++){
+    let re=0, im=0;
+    for(let k=0;k<n;k++){
+      const ang = 2*Math.PI*i*k/n;
+      re += X[k][0]*Math.cos(ang) - X[k][1]*Math.sin(ang);
+      im += X[k][0]*Math.sin(ang) + X[k][1]*Math.cos(ang);
+    }
+    rt = Math.max(rt, Math.abs(re/n - xorig[i]), Math.abs(im/n));
+  }
+  $('stRt').textContent = rt.toExponential(1);
+  let e1=0, e2=0;
+  for(let i=0;i<n;i++) e1 += xorig[i]*xorig[i];
+  for(const v of X) e2 += (v[0]*v[0]+v[1]*v[1])/n;
+  $('stPar').textContent = Math.abs(e1-e2).toExponential(1);
+}
+let timer = null;
+$('play').addEventListener('click', () => {
+  if(timer){ clearInterval(timer); timer = null; $('play').textContent='▶ 播放合并'; return; }
+  $('play').textContent='⏸ 暫停';
+  let s = 0;
+  $('stage').value = 0; draw();
+  timer = setInterval(() => {
+    s++;
+    const max = parseInt($('stage').max,10);
+    if(s > max){ clearInterval(timer); timer=null; $('play').textContent='▶ 播放合并'; return; }
+    $('stage').value = s; draw();
+  }, 650);
+});
+$('shiftBtn').addEventListener('click', () => {
+  const n = parseInt($('nsel').value,10);
+  const x = signal(n, $('sig').value), s = 3;
+  const stages = fftStages(x), X = stages[stages.length-1];
+  const y = x.map((_,j) => x[(j-s+n)%n]);
+  const Y = fftStages(y)[stages.length-1];
+  let err = 0;
+  for(let k=0;k<n;k++){
+    const ang = -2*Math.PI*s*k/n, wr = Math.cos(ang), wi = Math.sin(ang);
+    const pr = X[k][0]*wr - X[k][1]*wi, pi = X[k][0]*wi + X[k][1]*wr;
+    err = Math.max(err, Math.abs(pr-Y[k][0]), Math.abs(pi-Y[k][1]));
+  }
+  $('stShift').textContent = err.toExponential(1);
+});
+['nsel','sig','stage'].forEach(id => $(id).addEventListener('input', draw));
+draw();
+</script>
+</body>
+</html>
